@@ -1,1 +1,1 @@
-from .magic import *
+from .kqlmagic import *

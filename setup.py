@@ -6,7 +6,7 @@ README = open(os.path.join(here, 'README.rst')).read()
 NEWS = open(os.path.join(here, 'NEWS.txt')).read()
 
 
-version = '0.3.9'
+version = '0.1.1'
 
 install_requires = [
     'prettytable',
@@ -19,12 +19,12 @@ install_requires = [
 ]
 
 
-setup(name='ipython-sql',
+setup(name='jupyter-kql-magic',
     version=version,
-    description="RDBMS access via IPython",
+    description="Kusto access via Jupyter magic",
     long_description=README + '\n\n' + NEWS,
     classifiers=[
-        'Development Status :: 3 - Alpha',
+        'Development Status :: 1 - Alpha',
         'Environment :: Console',
         'License :: OSI Approved :: MIT License',
         'Topic :: Database',
@@ -32,10 +32,10 @@ setup(name='ipython-sql',
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 2',
     ],
-    keywords='database ipython postgresql mysql',
-    author='Catherine Devlin',
-    author_email='catherine.devlin@gmail.com',
-    url='https://pypi.python.org/pypi/ipython-sql',
+    keywords='database ipython jupyter kql kusto ',
+    author='Michael Binshtock',
+    author_email='mbnshtck@gmail.com',
+    url='https://pypi.python.org/pypi/jupyter-kql-magic',
     license='MIT',
     packages=find_packages('src'),
     package_dir = {'': 'src'},

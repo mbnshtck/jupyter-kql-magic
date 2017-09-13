@@ -1,21 +1,22 @@
 import re
 import sys
 from nose.tools import with_setup, raises
-from sql.magic import SqlMagic
+from kql.kqlmagic import KqlMagic
 
 ip = get_ipython()
 
 class SqlEnv(object):
+    # Object constructor
     def __init__(self, connectstr):
         self.connectstr = connectstr
     def query(self, txt):
-        return ip.run_line_magic('sql', "%s %s" % (self.connectstr, txt))
+        return ip.run_line_magic('kql', "%s %s" % (self.connectstr, txt))
 
-sql_env = SqlEnv('sqlite://')
+sql_env = SqlEnv('kusto://')
 
 def setup():
-    sqlmagic = SqlMagic(shell=ip)
-    ip.register_magics(sqlmagic)
+    KqlMagic = KqlMagic(shell=ip)
+    ip.register_magics(KqlMagic)
     creator = """
         DROP TABLE IF EXISTS manycoltbl;
         CREATE TABLE manycoltbl 

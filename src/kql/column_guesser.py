@@ -8,6 +8,7 @@ class Column(list):
     'Store a column of tabular data; record its name and whether it is numeric'
     is_quantity = True
     name = ''
+    # Object constructor
     def __init__(self, *arg, **kwarg):
         pass
         
