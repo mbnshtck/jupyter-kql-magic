@@ -40,10 +40,9 @@
     <Compile Include="src\kql\kusto_engine.py" />
     <Compile Include="src\kql\textmagic.py" />
     <Compile Include="src\kql\__init__.py" />
-    <Compile Include="src\tests\text_column_guesser.py" />
+    <Compile Include="src\tests\test_column_guesser.py" />
     <Compile Include="src\tests\test_magic.py" />
-    <Compile Include="src\tests\text_magic.py" />
-    <Compile Include="src\tests\text_parse.py" />
+    <Compile Include="src\tests\test_parse.py" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="examples" />

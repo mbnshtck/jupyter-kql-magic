@@ -21,3 +21,9 @@ To make a release,
   3) Test the generated source distribution in dist/
   4) Upload to PyPI: 'python setup.py sdist register upload'
   5) Increase version in setup.py (for next release)
+
+
+  Run test
+  1. launch anaconda prompt
+  2. >cd c:\My Projects\KqlMagic\src
+  3  >ipython -c "import nose; nose.run()"

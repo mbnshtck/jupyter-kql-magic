@@ -88,6 +88,7 @@ class KqlMagic(Magics, Configurable):
         user_ns = self.shell.user_ns.copy()
         user_ns.update(local_ns)
 
+        logger().debug("To Parsed: \n\rline: {}\n\rcell:\n\r{}".format(line, cell))
         parsed = Parser.parse('%s\n%s' % (line, cell), self)
         logger().debug("Parsed: {}".format(parsed))
         flags = parsed['flags']

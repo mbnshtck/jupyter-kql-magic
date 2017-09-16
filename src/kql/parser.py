@@ -1,6 +1,7 @@
 from os.path import expandvars
 import six
 from six.moves import configparser as CP
+from kql.log  import Logger, logger
 
 
 class Parser(object):
@@ -10,6 +11,7 @@ class Parser(object):
         """Separate input into (connection info, KQL statements, flags)"""
 
         parts = [part.strip() for part in cell.split(None, 1)]
+        print(parts)
         if not parts:
             return {'connection': '', 'kql': '', 'flags': {}}
 

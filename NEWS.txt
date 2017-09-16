@@ -8,3 +8,6 @@ News
 
 * Initial release
 
+TODO
+*Support parametrize based on local/global ns
+*connection string

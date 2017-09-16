@@ -16,7 +16,6 @@ def _setup():
     pass
 
 def _teardown():
-#    ip.run_line_magic('kql', 'kusto:// DROP TABLE test')
     pass
 
 query1 = "kusto:// let T = view () { datatable(n:long, name:string)[1,'foo',2,'bar'] }; T"
