@@ -22,8 +22,29 @@ To make a release,
   4) Upload to PyPI: 'python setup.py sdist register upload'
   5) Increase version in setup.py (for next release)
 
+  Get kusto_client
+  1. link https://kusto.azurewebsites.net/docs/api/kusto_python_client_library.html
+  2. launch anaconda prompt (folder "C:\ProgramData\Microsoft\Windows\Start Menu\Programs\Anaconda3 (64-bit)")
+  2. pip install http://52.173.187.55/simple/kusto_client-0.4.0-py2.py3-none-any.whl
+  3. pip install prettytable from PyPI
+
+
 
   Run test
-  1. launch anaconda prompt
+  1. launch anaconda prompt (folder "C:\ProgramData\Microsoft\Windows\Start Menu\Programs\Anaconda3 (64-bit)")
   2. >cd c:\My Projects\KqlMagic\src
+  3. >set TEST_CONNECTION_STR=kusto://username('michabin@microsoft.com').password('g=Hh-h34G').cluster('Oiildc').database('OperationInsights_PFS_PROD')
   3  >ipython -c "import nose; nose.run()"
+
+  Add to Jupyter Notebook
+  1. %cd c:\My Projects\KqlMagic\src
+  2. %load_ext kql               (in case of modified: %reload_ext kql)
+
+  Hints:
+  F11 toggle Chrome to full screen
+  View/Toggle Header 
+  View/Toggle Toolbar
+  Kernel/Restart & Clear Output
+
+
+

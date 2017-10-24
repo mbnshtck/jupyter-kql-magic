@@ -10,14 +10,6 @@ class Runner(object):
             f.write(str(val) + '\n')
         return val
 
-    @staticmethod
-    def interpret_rowcount(rowcount):
-        if rowcount < 0:
-            result = 'Done.'
-        else:
-            result = '%d rows affected.' % rowcount
-        return result
-
 
     @staticmethod
     def run(conn, code, config, user_namespace = None):
@@ -47,8 +39,6 @@ class Runner(object):
             for query in queries:
                 kusto_proxy = KustoProxy(conn)
                 result = kusto_proxy.execute(query, user_namespace)
-                if result and config.feedback:
-                    print(Runner.interpret_rowcount(result.rowcount()))
 
             #
             # returning only last result, intentionally

@@ -11,14 +11,11 @@
     <OutputPath>.</OutputPath>
     <ProjectTypeGuids>{888888a0-9f3d-457c-b088-3a5042f75d52}</ProjectTypeGuids>
     <LaunchProvider>Standard Python launcher</LaunchProvider>
-    <InterpreterId />
-    <InterpreterVersion />
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)' == 'Debug'" />
   <PropertyGroup Condition="'$(Configuration)' == 'Release'" />
   <PropertyGroup>
     <VisualStudioVersion Condition=" '$(VisualStudioVersion)' == '' ">10.0</VisualStudioVersion>
-    <PtvsTargetsFile>$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets</PtvsTargetsFile>
   </PropertyGroup>
   <ItemGroup>
     <Content Include="examples\wordcount.png" />
@@ -38,7 +35,6 @@
     <Compile Include="src\kql\results.py" />
     <Compile Include="src\kql\kusto_proxy.py" />
     <Compile Include="src\kql\kusto_engine.py" />
-    <Compile Include="src\kql\textmagic.py" />
     <Compile Include="src\kql\__init__.py" />
     <Compile Include="src\tests\test_column_guesser.py" />
     <Compile Include="src\tests\test_magic.py" />
@@ -50,6 +46,5 @@
     <Folder Include="src\kql" />
     <Folder Include="src\tests" />
   </ItemGroup>
-  <Import Project="$(PtvsTargetsFile)" Condition="Exists($(PtvsTargetsFile))" />
-  <Import Project="$(MSBuildToolsPath)\Microsoft.Common.targets" Condition="!Exists($(PtvsTargetsFile))" />
+  <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
 </Project>

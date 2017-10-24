@@ -1,6 +1,8 @@
 import os.path
+import json
 from kusto_client import KustoClient
 import requests
+
 
 class KustoRow(object):
     def __init__(self, row, col_num):
@@ -8,12 +10,15 @@ class KustoRow(object):
         self.next = 0
         self.last = col_num
 
+
     def __iter__(self):
         self.next = 0
         return self
 
+
     def next(self):
         return self.__next__()
+
 
     def __next__(self):
         if self.next >= self.last:
@@ -23,11 +28,14 @@ class KustoRow(object):
             self.next = self.next + 1
             return val
 
+
     def __getitem__(self, key):
         return self.row[key]
 
+
     def __len__(self):
         return self.last
+
 
     def __eq__(self, other):
         if (len(other) != self.last):
@@ -39,8 +47,10 @@ class KustoRow(object):
                 return False
         return True
 
+
     def __str__(self):
         return ", ".join(str(self.__getitem__(i)) for i in range(0, self.last))
+
 
 class KustoRowsIter(object):
     """ Iterator over returned rows, limited by size """
@@ -50,13 +60,16 @@ class KustoRowsIter(object):
         self.last = row_num
         self.col_num = col_num
 
+
     def __iter__(self):
         self.next = 0
         self.fetchall_iter = self.response.fetchall()
         return self
 
+
     def next(self):
         return self.__next__()
+
 
     def __next__(self):
         if self.next >= self.last:
@@ -65,24 +78,31 @@ class KustoRowsIter(object):
             self.next = self.next + 1
             return KustoRow(self.fetchall_iter.__next__(), self.col_num)
 
+
     def __len__(self):
         return self.last
+
 
 class KustoResponse(object):
     # Object constructor
     def __init__(self, response):
+        self.extended_properties_index = None
         self.response = response
         self.row_count = len(self.response.get_raw_response()['Tables'][0]['Rows'])
         self.col_count = len(self.response.get_raw_response()['Tables'][0]['Columns'])
 
+
     def fetchall(self):
         return KustoRowsIter(self.response, self.row_count, self.col_count)
+
 
     def fetchmany(self, size):
         return KustoRowsIter(self.response, min(size, self.row_count), self.col_count)
 
+
     def rowcount(self):
         return 0
+
 
     def keys(self):
         result = []
@@ -90,8 +110,33 @@ class KustoResponse(object):
             result.append(value['ColumnName'])
         return result
 
+
+
+    def extended_properties(self, name):
+        " returns value of attribute: Visualization, Title, Accumulate, IsQuerySorted, Kind, Annotation, By"
+        self.get_extended_properties_index()
+        if not self.extended_properties_index:
+            return None
+        attrib_str = self.response.get_raw_response()['Tables'][self.extended_properties_index]['Rows'][0][0]
+        json_obj = json.loads(attrib_str)
+        try:
+            return json_obj[name]
+        except:
+            return None
+
+
+    def get_extended_properties_index(self):
+        " returns the index to the table that contains the extended properties"
+        if not self.extended_properties_index:
+            table_num = self.response.get_raw_response()['Tables'].__len__()
+            for r in self.response.get_raw_response()['Tables'][table_num - 1]['Rows']:
+                if r[2] == "@ExtendedProperties":
+                    self.extended_properties_index = r[0]
+
+
     def returns_rows(self):
         return self.row_count > 0
+
 
 class KustoProxy(object):
 
@@ -110,9 +155,15 @@ class KustoProxy(object):
     def __kusto_client_execute(self, code, conn):
         if code.strip():
             if not conn.kusto_client:
+                if not conn.cluster_url:
+                    raise ConnectionError("Cluster is not defined.")
+                if not conn.username or not conn.password:
+                    raise ConnectionError("Username and Password are not defined.")
                 kusto_client = KustoClient(kusto_cluster=conn.cluster_url, client_id=conn.client_id, username=conn.username, password=conn.password)
                 conn.set_kusto_client(kusto_client)
 
+            if not conn.database_name:
+                raise ConnectionError("Database is not defined.")
             response = conn.kusto_client.execute(conn.database_name, code, False)
             # response = conn.kusto_client.execute(kusto_database=conn.database_name, query=code, accept_partial_results= False)
             return KustoResponse(response)

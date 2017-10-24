@@ -45,6 +45,14 @@ class KqlMagic(Magics, Configurable):
                            "a sqlalchemy connection string is formed from the "
                            "matching section in the DSN file.")
 
+    # [KUSTO]
+    # Driver          = Easysoft ODBC-SQL Server
+    # Server          = my_machine\SQLEXPRESS
+    # User            = my_domain\my_user
+    # Password        = my_password
+    # If the database you want to connect to is the default
+    # for the SQL Server login, omit this attribute
+    # Database        = Northwind
 
     # Object constructor
     def __init__(self, shell):
@@ -68,10 +76,10 @@ class KqlMagic(Magics, Configurable):
 
         Examples::
 
-          %%kql kusto://mypw@localhost:pw/mycluster/mydb
+          %%kql kusto://username('me').password('pw').cluster('mycluster').database('mydb')
           KQL statement
 
-          %%kql me@mydb
+          %%kql mydb@mycluster
           KQL statement
 
           %%kql
@@ -79,7 +87,7 @@ class KqlMagic(Magics, Configurable):
 
         Connect string syntax examples:
 
-          kusto://me:mypw@localhost/mycluster/mydb
+          kusto://username('me').password('pw').cluster('mycluster').database('mydb')
 
         """
         set_logger(Logger(None, create_log_context()))
@@ -102,6 +110,7 @@ class KqlMagic(Magics, Configurable):
 
         try:
             result = Runner.run(conn, parsed['kql'], self, user_ns)
+            saved_result = result
             if result is not None and not isinstance(result, str):
                 logger().debug("Results: {} x {}".format(len(result), len(result.keys)))
                 keys = result.keys
@@ -122,19 +131,24 @@ class KqlMagic(Magics, Configurable):
                         result = result.dict()
 
                     self.shell.user_ns.update(result)
-
-                    return None
+                    result = None
                 else:
 
                     if flags.get('result_var'):
                         result_var = flags['result_var']
                         print("Returning data to local variable {}".format(result_var))
                         self.shell.user_ns.update({result_var: result})
-                        return None
+                        result = None
             else:
                 logger().debug("Results: {}".format(result))
+                return result
+
 
             # Return results into the default ipython _ variable
+            if not self.autopandas and saved_result.visualization != '' and saved_result.visualization != 'table':
+                # print ("Visualization: {}", saved_result.visualization)
+                # print ("Visualization state: {}", saved_result.visualization != '')
+                return saved_result.pie()
             return result
 
         except (KustoError) as e:
@@ -153,3 +167,8 @@ def load_ipython_extension(ip):
     # js = "IPython.CodeCell.config_defaults.highlight_modes['magic_kql'] = {'reg':[/^%%kql/]};"
     # display_javascript(js, raw=True)
     ip.register_magics(KqlMagic)
+
+def unload_ipython_extension(ip):
+    """Unoad the extension in Jupyter."""
+    del ip.magics_manager.magics['cell']['kql']
+    del ip.magics_manager.magics['line']['kql']

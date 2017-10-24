@@ -125,6 +125,8 @@ class ResultSet(list, ColumnGuesserMixin):
             self.field_names = unduplicate_field_names(self.keys)
             self.pretty = PrettyTable(self.field_names, style=self.style)
             # self.pretty.set_style(self.style)
+            self.visualization = queryResult.extended_properties("Visualization")
+            self.title = queryResult.extended_properties("Title")
         else:
             list.__init__(self, [])
             self.pretty = None

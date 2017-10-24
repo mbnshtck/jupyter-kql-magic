@@ -18,7 +18,7 @@ def _setup():
 def _teardown():
     pass
 
-query1 = "kusto:// let T = view () { datatable(n:long, name:string)[1,'foo',2,'bar'] }; T"
+query1 = "$TEST_CONNECTION_STR let T = view () { datatable(n:long, name:string)[1,'foo',2,'bar'] }; T"
 
 @with_setup(_setup, _teardown)
 def test_memory_db():
@@ -60,7 +60,7 @@ def test_plain_style():
     assert re.search(r'1\s+\|\s+foo', str(result))
 
 query2 = """
-        kusto://
+        $TEST_CONNECTION_STR
         let T = view () { datatable(first_name:string, last_name:string, year_of_death:long)
         ['William', 'Shakespeare', 1616, 'Bertold', 'Brecht', 1956] }; 
         T
@@ -75,7 +75,7 @@ def test_multi_sql():
     assert 'Shakespeare' in str_result and 'Brecht' in str_result
 
 query3 = """
-        kusto://
+        $TEST_CONNECTION_STR
         x <<
         let T = view () { datatable(first_name:string, last_name:string, year_of_death:long)
         ['William', 'Shakespeare', 1616, 'Bertold', 'Brecht', 1956] }; 
@@ -98,7 +98,7 @@ def test_access_results_by_keys():
     assert result_by_key == (u'William', u'Shakespeare', 1616)
 
 query4 = """
-        kusto://
+        $TEST_CONNECTION_STR
         let T = view () { datatable(first_name:string, last_name:string, year_of_death:long)
         ['William', 'Shakespeare', 1616, 'Bertold', 'Brecht', 1956] }; 
         T | project last_name, last_nameX = last_name
@@ -122,7 +122,7 @@ def test_autolimit():
     assert len(result) == 1
 
 query5 = """
-        kusto://
+        $TEST_CONNECTION_STR
         let T = view () { datatable(Result:string)
         ['apple', 'banana', 'cherry'] }; 
         T
@@ -140,7 +140,7 @@ def test_displaylimit():
     assert 'apple' in result._repr_html_()
     assert 'cherry' not in result._repr_html_()
 
-query6 = "kusto:// let T = view () { datatable(first_name:string, last_name:string, year_of_death:long)['William', 'Shakespeare', 1616, 'Bertold', 'Brecht', 1956] }; T"
+query6 = "$TEST_CONNECTION_STR let T = view () { datatable(first_name:string, last_name:string, year_of_death:long)['William', 'Shakespeare', 1616, 'Bertold', 'Brecht', 1956] }; T"
 
 @with_setup(_setup, _teardown)
 def test_column_local_vars():
@@ -158,7 +158,7 @@ def test_userns_not_changed():
     ip.run_cell(dedent("""
     def function():
         local_var = 'local_val'
-        %kql kusto:// let T = view () { datatable(first_name:string, last_name:string, year_of_death:long)['William', 'Shakespeare', 1616, 'Bertold', 'Brecht', 1956] }; T
+        %kql $TEST_CONNECTION_STR let T = view () { datatable(first_name:string, last_name:string, year_of_death:long)['William', 'Shakespeare', 1616, 'Bertold', 'Brecht', 1956] }; T
     function()"""))
     assert 'local_var' not in ip.user_ns
 

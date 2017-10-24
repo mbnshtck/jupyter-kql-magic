@@ -11,7 +11,7 @@ class Parser(object):
         """Separate input into (connection info, KQL statements, flags)"""
 
         parts = [part.strip() for part in cell.split(None, 1)]
-        print(parts)
+        # print(parts)
         if not parts:
             return {'connection': '', 'kql': '', 'flags': {}}
 
@@ -28,13 +28,30 @@ class Parser(object):
             parser = CP.ConfigParser()
             parser.read(config.dsn_filename)
             cfg_dict = dict(parser.items(section))
+            cfg_dict_lower = dict()
+            # for k,v in cfg_dict:
+            #     cfg_dict_lower[k.lower()] = v
+            cfg_dict_lower = {k.lower(): v for (k,v) in cfg_dict.items()}
+            if cfg_dict_lower.get('user'):
+                cfg_dict_lower['username'] = cfg_dict_lower.get('user')
+            connection_list = []
+            for key in ['username','password','cluster','database']:
+                if cfg_dict_lower.get(key):
+                    connection_list.append(str.format("{0}('{1}')", key, cfg_dict_lower.get(key)))
+            connection = 'kusto://' + '.'.join(connection_list)
+            print (connection)
 
-            connection = str(URL(**cfg_dict))
             code = parts[1] if len(parts) > 1 else ''
         #
-        # connection taken from first line
+        # connection taken from first line, new full connection
         #
-        elif '@' in parts[0] or '://' in parts[0]:
+        elif parts[0].startswith('kusto://'):
+            connection = parts[0]
+            code = parts[1] if len(parts) > 1 else ''
+        #
+        # connection taken from first line, established connection
+        #
+        elif '@' in parts[0]:
             connection = parts[0]
             code = parts[1] if len(parts) > 1 else ''
         #
@@ -45,7 +62,7 @@ class Parser(object):
             code = cell
 
         #
-        # connection not specified
+        # parse code to kql and flags
         #
         kql, flags = Parser.parse_kql_flags(code.strip())
 
@@ -68,3 +85,5 @@ class Parser(object):
             flags['result_var'] = words[0]
             trimmed_kql = ' '.join(words[2:])
         return (trimmed_kql.strip(), flags)
+
+

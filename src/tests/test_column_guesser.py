@@ -12,7 +12,7 @@ class KqlEnv(object):
     def query(self, txt):
         return ip.run_line_magic('kql', "%s %s" % (self.connectstr, txt))
 
-kql_env = KqlEnv('kusto://')
+kql_env = KqlEnv('$TEST_CONNECTION_STR')
 
 basequery = "let manycoltbl = view () { datatable(name:string, y1:real, y2:real, name2:string, y3:real) ['r1-txt1', 1.01, 1.02, 'r1-txt2', 1.04, 'r2-txt1', 2.01, 2.02, 'r2-txt2', 2.04, 'r3-txt1', 3.01, 3.02, 'r3-txt2', 3.04] }; "
 

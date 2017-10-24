@@ -10,4 +10,6 @@ News
 
 TODO
 *Support parametrize based on local/global ns
-*connection string
+*Add retries to kusto for some errors
+
+*Maybe also support ingestion in some way
