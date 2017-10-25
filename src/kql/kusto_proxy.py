@@ -86,10 +86,11 @@ class KustoRowsIter(object):
 class KustoResponse(object):
     # Object constructor
     def __init__(self, response):
+        self.data_records_index = 0
         self.extended_properties_index = None
         self.response = response
-        self.row_count = len(self.response.get_raw_response()['Tables'][0]['Rows'])
-        self.col_count = len(self.response.get_raw_response()['Tables'][0]['Columns'])
+        self.row_count = len(self.response.get_raw_response()['Tables'][self.data_records_index]['Rows'])
+        self.col_count = len(self.response.get_raw_response()['Tables'][self.data_records_index]['Columns'])
 
 
     def fetchall(self):
@@ -101,12 +102,18 @@ class KustoResponse(object):
 
 
     def rowcount(self):
-        return 0
+        return self.row_count
+
+    def colcount(self):
+        return self.col_count
+
+    def recordscount(self):
+        return self.row_count
 
 
     def keys(self):
         result = []
-        for value in self.response.get_raw_response()['Tables'][0]['Columns']:
+        for value in self.response.get_raw_response()['Tables'][self.data_records_index]['Columns']:
             result.append(value['ColumnName'])
         return result
 
@@ -118,9 +125,11 @@ class KustoResponse(object):
         if not self.extended_properties_index:
             return None
         attrib_str = self.response.get_raw_response()['Tables'][self.extended_properties_index]['Rows'][0][0]
+        # print('extended_properties: {}'.format(attrib_str))
         json_obj = json.loads(attrib_str)
         try:
-            return json_obj[name]
+            value = json_obj[name]
+            return value if value != "" else None
         except:
             return None
 

@@ -34,6 +34,8 @@ To make a release,
   1. launch anaconda prompt (folder "C:\ProgramData\Microsoft\Windows\Start Menu\Programs\Anaconda3 (64-bit)")
   2. >cd c:\My Projects\KqlMagic\src
   3. >set TEST_CONNECTION_STR=kusto://username('michabin@microsoft.com').password('g=Hh-h34G').cluster('Oiildc').database('OperationInsights_PFS_PROD')
+  4. >set CONNECTION_STR=kusto://username('michabin@microsoft.com').password('g=Hh-h34G').cluster('Oiildc').database('OperationInsights_PFS_PROD')
+  5. >set HELP_CONNECTION_STR=kusto://username('michabin@microsoft.com').password('g=Hh-h34G').cluster('help').database('Samples')
   3  >ipython -c "import nose; nose.run()"
 
   Add to Jupyter Notebook

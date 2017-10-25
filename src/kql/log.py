@@ -73,6 +73,8 @@ class Logger(object):
     '''wrapper around python built-in logging to log correlation_id, and stack
     trace through keyword argument of 'log_stack_trace'
     '''
+
+
     def __init__(self, component_name=None, log_context=None):
         # if not log_context:
         #     raise AttributeError('Logger: log_context is a required parameter')
@@ -80,6 +82,7 @@ class Logger(object):
         self._component_name = component_name
         self.log_context = log_context
         self._logging = logging.getLogger(KQLMAGIC_LOGGER_NAME)
+
 
     def _log_message(self, msg, log_stack_trace=None):
         formatted = ''

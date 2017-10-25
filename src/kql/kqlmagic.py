@@ -1,3 +1,4 @@
+import time
 import re
 import logging
 # to avoid "No handler found" warnings.
@@ -39,7 +40,8 @@ class KqlMagic(Magics, Configurable):
     displaylimit = Int(None, config=True, allow_none=True, help="Automatically limit the number of rows displayed (full result set is still stored)")
     autopandas = Bool(False, config=True, help="Return Pandas DataFrames instead of regular result sets")
     column_local_vars = Bool(False, config=True, help="Return data into local variables from column names")
-    feedback = Bool(True, config=True, help="Print number of rows affected by DML")
+    feedback = Bool(True, config=True, help="Print number of records returned, and assigned variables")
+    show_conn_list = Bool(True, config=True, help="Print connection list, when connection not specified")
     dsn_filename = Unicode('odbc.ini', config=True, help="Path to DSN file. "
                            "When the first argument is of the form [section], "
                            "a sqlalchemy connection string is formed from the "
@@ -101,7 +103,10 @@ class KqlMagic(Magics, Configurable):
         logger().debug("Parsed: {}".format(parsed))
         flags = parsed['flags']
         try:
-            conn = Connection.set(parsed['connection'])
+            if not parsed['connection'] and Connection.connections and self.show_conn_list:
+                print(Connection.connection_list())
+            Connection.set(parsed['connection'])
+            conn = Connection.current
         except Exception as e:
             logger().error(str(e))
             print(e)
@@ -109,13 +114,20 @@ class KqlMagic(Magics, Configurable):
             return None
 
         try:
+            start_time = time.time()
             result = Runner.run(conn, parsed['kql'], self, user_ns)
+            elapsed_time = time.time() - start_time
             saved_result = result
             if result is not None and not isinstance(result, str):
+                if self.feedback:
+                    print('Done ({}): {} records'.format(str(elapsed_time), result.records_count))
+
                 logger().debug("Results: {} x {}".format(len(result), len(result.keys)))
                 keys = result.keys
 
                 if self.autopandas:
+                    if self.feedback:
+                        print('Returning data converted to pandas dataframe')
                     result = result.DataFrame()
 
                 if self.column_local_vars:
@@ -136,7 +148,8 @@ class KqlMagic(Magics, Configurable):
 
                     if flags.get('result_var'):
                         result_var = flags['result_var']
-                        print("Returning data to local variable {}".format(result_var))
+                        if self.feedback:
+                            print("Returning data to local variable {}".format(result_var))
                         self.shell.user_ns.update({result_var: result})
                         result = None
             else:
@@ -145,10 +158,10 @@ class KqlMagic(Magics, Configurable):
 
 
             # Return results into the default ipython _ variable
-            if not self.autopandas and saved_result.visualization != '' and saved_result.visualization != 'table':
-                # print ("Visualization: {}", saved_result.visualization)
-                # print ("Visualization state: {}", saved_result.visualization != '')
-                return saved_result.pie()
+            # if not self.autopandas:
+            visulaized_chart = saved_result.visualization_chart()
+            if visulaized_chart:
+                return None
             return result
 
         except (KustoError) as e:

@@ -49,7 +49,7 @@ class Connection(object):
                 cls.current = cls.connections.get(descriptor) or Connection(descriptor).current
         else:
             if cls.connections:
-                print(cls.connection_list())
+                pass
             else:
                 if os.getenv('CONNECTION_STR'):
                     cls.current = Connection(os.getenv('CONNECTION_STR')).current

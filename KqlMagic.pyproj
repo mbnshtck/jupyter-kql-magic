@@ -18,10 +18,16 @@
     <VisualStudioVersion Condition=" '$(VisualStudioVersion)' == '' ">10.0</VisualStudioVersion>
   </PropertyGroup>
   <ItemGroup>
+    <Content Include="buildout.cfg" />
+    <Content Include="csvfile" />
     <Content Include="examples\wordcount.png" />
     <Content Include="examples\writers.png" />
     <Content Include="HACKING.txt" />
+    <Content Include="LICENSE.TXT" />
+    <Content Include="MANIFEST.in" />
     <Content Include="NEWS.txt" />
+    <Content Include="README.rst" />
+    <Content Include="run_tests.sh" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="bootstrap.py" />

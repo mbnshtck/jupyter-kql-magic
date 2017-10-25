@@ -116,6 +116,7 @@ class ResultSet(list, ColumnGuesserMixin):
         style_name = config.style
         self.style = prettytable.__dict__[style_name.upper()]
 
+        self.show_chart = False
         if queryResult.returns_rows:
             if self.limit:
                 list.__init__(self, queryResult.fetchmany(size=self.limit))
@@ -125,6 +126,7 @@ class ResultSet(list, ColumnGuesserMixin):
             self.field_names = unduplicate_field_names(self.keys)
             self.pretty = PrettyTable(self.field_names, style=self.style)
             # self.pretty.set_style(self.style)
+            self.records_count = queryResult.recordscount()
             self.visualization = queryResult.extended_properties("Visualization")
             self.title = queryResult.extended_properties("Title")
         else:
@@ -187,6 +189,17 @@ class ResultSet(list, ColumnGuesserMixin):
         frame = pd.DataFrame(self, columns=(self and self.keys) or [])
         return frame
 
+    def visualization_chart(self):
+        # https://kusto.azurewebsites.net/docs/queryLanguage/query_language_renderoperator.html
+        if not self.visualization or self.visualization == 'table':
+            return None
+        self.show_chart = True
+        chart = self.pie(" ", self.title)
+        self.show_chart = False
+        return chart
+
+
+
     def pie(self, key_word_sep=" ", title=None, **kwargs):
         """Generates a pylab pie chart from the result set.
 
@@ -212,6 +225,8 @@ class ResultSet(list, ColumnGuesserMixin):
         import matplotlib.pylab as plt
         pie = plt.pie(self.ys[0], labels=self.xlabels, **kwargs)
         plt.title(title or self.ys[0].name)
+        if self.show_chart:
+            plt.show()
         return pie
 
     def plot(self, title=None, **kwargs):
