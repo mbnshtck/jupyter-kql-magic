@@ -1,5 +1,5 @@
 ===========
-ipython-sql
+jupyter-kql-magic
 ===========
 
 :Author: Michael Binshtock, mbnshtck@gmail.com
