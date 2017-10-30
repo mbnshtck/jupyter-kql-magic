@@ -40,7 +40,7 @@ class KustoRow(object):
     def __eq__(self, other):
         if (len(other) != self.last):
             return False
-        for i in range(0, self.last):
+        for i in range(self.last):
             s = self.__getitem__(i)
             o = other[i]
             if o != s:
@@ -49,7 +49,7 @@ class KustoRow(object):
 
 
     def __str__(self):
-        return ", ".join(str(self.__getitem__(i)) for i in range(0, self.last))
+        return ", ".join(str(self.__getitem__(i)) for i in range(self.last))
 
 
 class KustoRowsIter(object):

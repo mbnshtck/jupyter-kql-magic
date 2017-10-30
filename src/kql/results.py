@@ -1,3 +1,4 @@
+import functools
 import operator
 import csv
 import six
@@ -194,7 +195,42 @@ class ResultSet(list, ColumnGuesserMixin):
         if not self.visualization or self.visualization == 'table':
             return None
         self.show_chart = True
-        chart = self.pie(" ", self.title)
+        # First column is color-axis, second column is numeric
+        if self.visualization == 'piechart':
+            chart = self.render_pie(" ", self.title)
+        # First column is x-axis, and can be text, datetime or numeric. Other columns are numeric, displayed as horizontal strips.
+        # kind = default, unstacked, stacked, stacked100 (Default, same as unstacked; unstacked - Each "area" to its own; stacked - "Areas" are stacked to the right; stacked100 - "Areas" are stacked to the right, and stretched to the same width)
+        elif self.visualization == 'barchart':
+            chart = self.render_barh(" ", self.title)
+        # Like barchart, with vertical strips instead of horizontal strips.
+        # kind = default, unstacked, stacked, stacked100 
+        elif self.visualization == 'columnchart':
+            chart = self.render_bar(" ", self.title)
+        # Area graph. First column is x-axis, and should be a numeric column. Other numeric columns are y-axes.
+        # kind = default, unstacked, stacked, stacked100 
+        elif self.visualization == 'areachart':
+            chart = self.render_areachart(" ", self.title)
+        # Line graph. First column is x-axis, and should be a numeric column. Other numeric columns are y-axes.
+        elif self.visualization == 'linechart':
+            chart = self.render_linechart(" ", self.title)
+        # Line graph. First column is x-axis, and should be datetime. Other columns are y-axes.
+        elif self.visualization == 'timechart':
+            chart = self.pie(" ", self.title)
+        # Similar to timechart, but highlights anomalies using an external machine-learning service.
+        elif self.visualization == 'anomalychart':
+            chart = self.render_anomalychart(" ", self.title)
+        # Stacked area graph. First column is x-axis, and should be a numeric column. Other numeric columns are y-axes.
+        elif self.visualization == 'stackedareachart':
+            chart = self.pie(" ", self.title)
+        # Last two columns are the x-axis, other columns are y-axis.
+        elif self.visualization == 'ladderchart':
+            chart = self.pie(" ", self.title)
+        # Interactive navigation over the events time-line (pivoting on time axis)
+        elif self.visualization == 'timepivot':
+            chart = self.pie(" ", self.title)
+        # Displays a pivot table and chart. User can interactively select data, columns, rows and various chart types.
+        elif self.visualization == 'pivotchart':
+            chart = self.pie(" ", self.title)
         self.show_chart = False
         return chart
 
@@ -250,7 +286,7 @@ class ResultSet(list, ColumnGuesserMixin):
         import matplotlib.pylab as plt
         self.guess_plot_columns()
         self.x = self.x or range(len(self.ys[0]))
-        coords = reduce(operator.add, [(self.x, y) for y in self.ys])
+        coords = functools.reduce(operator.add, [(self.x, y) for y in self.ys])
         plot = plt.plot(*coords, **kwargs)
         if hasattr(self.x, 'name'):
             plt.xlabel(self.x.name)
@@ -313,6 +349,277 @@ class ResultSet(list, ColumnGuesserMixin):
         else:
             return outfile.getvalue()
 
+    def render_pie(self, key_word_sep=" ", title=None, **kwargs):
+        """Generates a pylab pie chart from the result set.
+
+        ``matplotlib`` must be installed, and in an
+        IPython Notebook, inlining must be on::
+
+            %%matplotlib inline
+
+        First column is color-axis, second column is numeric
+
+        Parameters
+        ----------
+        key_word_sep: string used to separate column values
+                      from each other in pie labels
+        title: Plot title, defaults to name of value column
+
+        Any additional keyword arguments will be passsed
+        through to ``matplotlib.pylab.pie``.
+        """
+        self.build_columns()
+        import matplotlib.pylab as plt
+        pie = plt.pie(self.columns[1], labels=self.columns[0], **kwargs)
+        plt.title(title or self.columns[1].name)
+        if self.show_chart:
+            plt.show()
+        return pie
+
+
+    def render_barh(self, key_word_sep=" ", title=None, **kwargs):
+        """Generates a pylab horizaontal barchart from the result set.
+
+        ``matplotlib`` must be installed, and in an
+        IPython Notebook, inlining must be on::
+
+            %%matplotlib inline
+
+        First column is x-axis, and can be text, datetime or numeric. 
+        Other columns are numeric, displayed as horizontal strips.
+
+        Parameters
+        ----------
+        key_word_sep: string used to separate column values
+                      from each other in pie labels
+        title: Plot title, defaults to name of value column
+
+        Any additional keyword arguments will be passsed
+        through to ``matplotlib.pylab.pie``.
+        """
+        import matplotlib.pylab as plt
+        self.build_columns()
+        quantity_columns = [c for c in self.columns[1:] if c.is_quantity]
+        ylabel = ", ".join([c.name for c in quantity_columns])
+        xlabel = self.columns[0].name
+
+        dim = len(quantity_columns)
+        w = 0.8
+        dimw = w / dim
+
+        ax = plt.subplot(111)
+        x = plt.arange(len(self.columns[0]))
+        xpos = -dimw * (len(quantity_columns) / 2)
+        for y in quantity_columns:
+            barchart = plt.barh(x + xpos, y, align='center', **kwargs)
+            # ax.barh(x + xpos, y, width = dimw, color='b', align='center', **kwargs)
+            # ax.bar(y, width = dimw, height = w, x + xpos, *, align='center', **kwargs)
+            xpos += dimw
+        plt.yticks(range(len(self.columns[0])), self.columns[0], rotation=0)
+        plt.ylabel(xlabel)
+        plt.xlabel(ylabel)
+        plt.title(title or ylabel)
+
+        if self.show_chart:
+            plt.show()
+        return barchart
+
+    def render_bar(self, key_word_sep=" ", title=None, **kwargs):
+        """Generates a pylab horizaontal barchart from the result set.
+
+        ``matplotlib`` must be installed, and in an
+        IPython Notebook, inlining must be on::
+
+            %%matplotlib inline
+
+        First column is x-axis, and can be text, datetime or numeric. 
+        Other columns are numeric, displayed as horizontal strips.
+
+        Parameters
+        ----------
+        key_word_sep: string used to separate column values
+                      from each other in pie labels
+        title: Plot title, defaults to name of value column
+
+        Any additional keyword arguments will be passsed
+        through to ``matplotlib.pylab.pie``.
+        """
+        import matplotlib.pylab as plt
+        self.build_columns()
+        quantity_columns = [c for c in self.columns[1:] if c.is_quantity]
+        ylabel = ", ".join([c.name for c in quantity_columns])
+        xlabel = self.columns[0].name
+
+        # print("xlabel: {}".format(xlabel))
+        # print("ylabel: {}".format(ylabel))
+
+        dim = len(quantity_columns)
+        w = 0.8
+        dimw = w / dim
+
+        ax = plt.subplot(111)
+        x = plt.arange(len(self.columns[0]))
+        xpos = -dimw * (len(quantity_columns) / 2)
+        for y in quantity_columns:
+            columnchart = plt.bar(x + xpos, y, width = dimw, align='center', **kwargs)
+            xpos += dimw
+        plt.xticks(range(len(self.columns[0])), self.columns[0], rotation = 45)
+        plt.xlabel(xlabel)
+        plt.ylabel(ylabel)
+        plt.title(title or ylabel)
+
+        if self.show_chart:
+            plt.show()
+        return columnchart
+
+
+    def render_linechart(self, key_word_sep=" ", title=None, **kwargs):
+        """Generates a pylab plot from the result set.
+
+        ``matplotlib`` must be installed, and in an
+        IPython Notebook, inlining must be on::
+
+            %%matplotlib inline
+
+        First column is x-axis, and should be a numeric column. Other numeric columns are y-axes.
+
+        Parameters
+        ----------
+        title: Plot title, defaults to names of Y value columns
+
+        Any additional keyword arguments will be passsed
+        through to ``matplotlib.pylab.plot``.
+        """
+
+        import matplotlib.pyplot as plt
+        self.build_columns()
+        quantity_columns = [c for c in self.columns if c.is_quantity]
+        if len(quantity_columns) < 2:
+            return None
+        x = quantity_columns[0]
+        ys = quantity_columns[1:]
+        ylabel = ", ".join([c.name for c in ys])
+        xlabel = x.name
+
+        coords = functools.reduce(operator.add, [(x, y) for y in ys])
+        plot = plt.plot(*coords, **kwargs)
+        plt.title(title or ylabel)
+        plt.xlabel(xlabel)
+        plt.ylabel(ylabel)
+        if self.show_chart:
+            plt.show()
+        return plot
+
+
+    def render_areachart(self, key_word_sep=" ", title=None, **kwargs):
+        """Generates a pylab plot from the result set.
+
+        ``matplotlib`` must be installed, and in an
+        IPython Notebook, inlining must be on::
+
+            %%matplotlib inline
+
+        First column is x-axis, and should be a numeric column. Other numeric columns are y-axes.
+        kind = default, unstacked, stacked, stacked100 
+
+        Parameters
+        ----------
+        title: Plot title, defaults to names of Y value columns
+
+        Any additional keyword arguments will be passsed
+        through to ``matplotlib.pylab.plot``.
+        """
+
+        import matplotlib.pyplot as plt
+        self.build_columns()
+        quantity_columns = [c for c in self.columns if c.is_quantity]
+        if len(quantity_columns) < 2:
+            return None
+        x = quantity_columns[0]
+        ys = quantity_columns[1:]
+        ylabel = ", ".join([c.name for c in ys])
+        xlabel = x.name
+
+        coords = functools.reduce(operator.add, [(x, y) for y in ys])
+        plot = plt.plot(*coords, **kwargs)
+        plt.xticks(range(len(x)), x, rotation = 45)
+        plt.title(title or ylabel)
+        plt.xlabel(xlabel)
+        plt.ylabel(ylabel)
+        if self.show_chart:
+            plt.show()
+        return plot
+
+
+
+    def render_anomalychart(self, key_word_sep=" ", title=None, **kwargs):
+        import plotly
+        plotly.offline.init_notebook_mode(connected=True)
+
+        import numpy as np
+        import matplotlib.pyplot as plt
+        import plotly.plotly as py
+        import plotly.graph_objs as go
+
+
+        # create our stacked data manually
+        y0 = np.random.rand(100)
+        y1 = y0 + np.random.rand(100)
+        y2 = y1 + np.random.rand(100)
+        capacity = 3*np.ones(100)
+
+        x0 = list(range(len(y0)))
+
+        trace0 = go.Scatter(
+            x=x0,
+            y=y0,
+            mode='lines',
+            line=dict(width=0.5,
+                      color='rgb(184, 247, 212)'),
+            fill='tonexty'
+        )
+        trace1 = go.Scatter(
+            x=x0,
+            y=y1,
+            mode='lines',
+            line=dict(width=0.5,
+                      color='rgb(111, 231, 219)'),
+            fill='tonexty'
+        )
+        trace2 = go.Scatter(
+            x=x0,
+            y=y2,
+            mode='lines',
+            line=dict(width=0.5,
+                      color='rgb(127, 166, 238)'),
+            fill='tonexty'
+        )
+
+        traceC = go.Scatter(
+            x=x0,
+            y=capacity,
+            mode='lines',
+            line=dict(width=0.5,
+                      color='rgb(131, 90, 241)'),
+            fill='tonexty'
+        )
+        data = [trace0, trace1, trace2, traceC]
+        layout = go.Layout(
+            showlegend=True,
+            xaxis=dict(
+                type='category',
+            ),
+            yaxis=dict(
+                type='linear',
+                range=[0, 3],
+                dtick=20,
+                ticksuffix='%'
+            )
+        )
+        fig = go.Figure(data=data, layout=layout)
+        plotly.offline.iplot(fig, filename='stacked-area-plot')
+        return fig
+
 
 class PrettyTable(prettytable.PrettyTable):
 
@@ -335,3 +642,5 @@ class PrettyTable(prettytable.PrettyTable):
             self.row_count = min(len(data), self.displaylimit)
         for row in data[:self.displaylimit]:
             self.add_row(row)
+
+

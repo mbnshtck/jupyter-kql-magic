@@ -26,6 +26,7 @@ class ColumnGuesserMixin(object):
     pie: ... y
     """
     def _build_columns(self):
+        self.num_is_quantity = 0
         self.columns = [Column() for col in self.keys]
         for row in self:
             for (col_idx, col_val) in enumerate(row):
@@ -36,7 +37,7 @@ class ColumnGuesserMixin(object):
             
         for (idx, key_name) in enumerate(self.keys):
             self.columns[idx].name = key_name
-            
+
         self.x = Column()
         self.ys = []
             
@@ -59,6 +60,14 @@ class ColumnGuesserMixin(object):
                 self.xlabels.append(xlabel_sep.join(
                     str(c[row_idx]) for c in self.columns))
         self.xlabel = ", ".join(c.name for c in self.columns)
+
+    def _get_xlabel(self, xlabel_sep=" ", index=None):
+        self.xlabels = []
+        if self.columns:
+            for row_idx in range(len(self.columns[0])):
+                self.xlabels.append(xlabel_sep.join(
+                    str(c[row_idx]) for c in self.columns))
+        self.xlabel = ", ".join(c.name for c in self.columns)
       
     def _guess_columns(self):
         self._build_columns()
@@ -66,6 +75,12 @@ class ColumnGuesserMixin(object):
         if not self.ys:
             raise AttributeError("No quantitative columns found for chart")
         
+    def build_columns(self):
+        """
+        just build the columns.
+        """
+        self._build_columns()
+
     def guess_pie_columns(self, xlabel_sep=" "):
         """
         Assigns x, y, and x labels from the data set for a pie chart.
