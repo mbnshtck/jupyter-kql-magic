@@ -1,3 +1,5 @@
+from datetime import timedelta, datetime
+
 """
 Splits tabular data in the form of a list of rows into columns;
 makes guesses about the role of each column for plotting purposes
@@ -7,6 +9,7 @@ makes guesses about the role of each column for plotting purposes
 class Column(list):
     'Store a column of tabular data; record its name and whether it is numeric'
     is_quantity = True
+    is_datetime = True
     name = ''
     # Object constructor
     def __init__(self, *arg, **kwarg):
@@ -20,20 +23,30 @@ def is_quantity(val):
     """
     return hasattr(val, '__sub__')
 
+
 class ColumnGuesserMixin(object):
     """
     plot: [x, y, y...], y
     pie: ... y
     """
-    def _build_columns(self):
+    def _build_columns(self, name=None):
+        rows = self
+        if name:
+            idx = self.keys.index(name)
+            rows = sorted(self, key=lambda row: row[idx])   # sort by index
+
+
         self.num_is_quantity = 0
         self.columns = [Column() for col in self.keys]
-        for row in self:
+        for row in rows:
             for (col_idx, col_val) in enumerate(row):
                 col = self.columns[col_idx]
                 col.append(col_val)
                 if (col_val is not None) and (not is_quantity(col_val)):
                     col.is_quantity = False
+                    col.is_datetime = False
+                elif not isinstance(col_val, datetime):
+                    col.is_datetime = False
             
         for (idx, key_name) in enumerate(self.keys):
             self.columns[idx].name = key_name
@@ -41,6 +54,8 @@ class ColumnGuesserMixin(object):
         self.x = Column()
         self.ys = []
             
+
+
     def _get_y(self):
         for idx in range(len(self.columns)-1,-1,-1):
             if self.columns[idx].is_quantity:
@@ -75,11 +90,13 @@ class ColumnGuesserMixin(object):
         if not self.ys:
             raise AttributeError("No quantitative columns found for chart")
         
-    def build_columns(self):
+    def build_columns(self, name = None):
         """
         just build the columns.
+        if name specified, first sort row by name
         """
-        self._build_columns()
+        self._build_columns(name)
+
 
     def guess_pie_columns(self, xlabel_sep=" "):
         """

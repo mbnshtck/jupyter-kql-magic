@@ -36,6 +36,11 @@ class Runner(object):
             # execute the queries sequentialy
             #
 
+            if len(queries) > 0 and queries[-1].strip() == ';':
+                suppress_results = True
+                queries = queries[:-2]
+
+
             for query in queries:
                 kusto_proxy = KustoProxy(conn)
                 result = kusto_proxy.execute(query, user_namespace)

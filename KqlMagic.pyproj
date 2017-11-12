@@ -32,6 +32,8 @@
   <ItemGroup>
     <Compile Include="bootstrap.py" />
     <Compile Include="setup.py" />
+    <Compile Include="src\kql\ai_client.py" />
+    <Compile Include="src\kql\ai_engine.py" />
     <Compile Include="src\kql\column_guesser.py" />
     <Compile Include="src\kql\connection.py" />
     <Compile Include="src\kql\log.py" />

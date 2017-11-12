@@ -195,6 +195,7 @@ class ResultSet(list, ColumnGuesserMixin):
         if not self.visualization or self.visualization == 'table':
             return None
         self.show_chart = True
+        chart = None
         # First column is color-axis, second column is numeric
         if self.visualization == 'piechart':
             chart = self.render_pie(" ", self.title)
@@ -206,22 +207,23 @@ class ResultSet(list, ColumnGuesserMixin):
         # kind = default, unstacked, stacked, stacked100 
         elif self.visualization == 'columnchart':
             chart = self.render_bar(" ", self.title)
-        # Area graph. First column is x-axis, and should be a numeric column. Other numeric columns are y-axes.
-        # kind = default, unstacked, stacked, stacked100 
+         # Area graph. First column is x-axis, and should be a numeric column. Other numeric columns are y-axes.
+         # kind = default, unstacked, stacked, stacked100 
         elif self.visualization == 'areachart':
-            chart = self.render_areachart(" ", self.title)
+            chart = self.render_areachart_plotly(" ", self.title) 
+            # chart = self.render_areachart(" ", self.title)
         # Line graph. First column is x-axis, and should be a numeric column. Other numeric columns are y-axes.
         elif self.visualization == 'linechart':
-            chart = self.render_linechart(" ", self.title)
+            chart = self.render_linechart_plotly(" ", self.title)
         # Line graph. First column is x-axis, and should be datetime. Other columns are y-axes.
         elif self.visualization == 'timechart':
-            chart = self.pie(" ", self.title)
+            chart = self.render_timechart_plotly(" ", self.title)
         # Similar to timechart, but highlights anomalies using an external machine-learning service.
         elif self.visualization == 'anomalychart':
-            chart = self.render_anomalychart(" ", self.title)
+            chart = self.render_anomalychart_plotly(" ", self.title)
         # Stacked area graph. First column is x-axis, and should be a numeric column. Other numeric columns are y-axes.
         elif self.visualization == 'stackedareachart':
-            chart = self.pie(" ", self.title)
+            chart = self.render_stackedareachart_plotly(" ", self.title)
         # Last two columns are the x-axis, other columns are y-axis.
         elif self.visualization == 'ladderchart':
             chart = self.pie(" ", self.title)
@@ -231,6 +233,9 @@ class ResultSet(list, ColumnGuesserMixin):
         # Displays a pivot table and chart. User can interactively select data, columns, rows and various chart types.
         elif self.visualization == 'pivotchart':
             chart = self.pie(" ", self.title)
+        # Points graph. First column is x-axis, and should be a numeric column. Other numeric columns are y-axes
+        elif self.visualization == 'scatterchart':
+            chart = self.render_scatterchart_plotly(" ", self.title)
         self.show_chart = False
         return chart
 
@@ -511,7 +516,7 @@ class ResultSet(list, ColumnGuesserMixin):
         return plot
 
 
-    def render_areachart(self, key_word_sep=" ", title=None, **kwargs):
+    def render_areachart_plotly(self, key_word_sep=" ", title=None, **kwargs):
         """Generates a pylab plot from the result set.
 
         ``matplotlib`` must be installed, and in an
@@ -530,95 +535,320 @@ class ResultSet(list, ColumnGuesserMixin):
         through to ``matplotlib.pylab.plot``.
         """
 
-        import matplotlib.pyplot as plt
+        import plotly
+        plotly.offline.init_notebook_mode(connected=True)
+
+        import plotly.plotly as py
+        import plotly.graph_objs as go
+
+        colors_pallete = ['rgb(184, 247, 212)', 'rgb(111, 231, 219)', 'rgb(127, 166, 238)', 'rgb(131, 90, 241)' ]
+
+        self.build_columns()
+        quantity_columns = [c for c in self.columns[1:] if c.is_quantity]
+        if len(quantity_columns) < 1:
+            return None
+
+        xticks = self.columns[0]
+        ys = quantity_columns
+        ylabel = ", ".join([c.name for c in ys])
+        xlabel = xticks.name
+        data = [go.Scatter(x=xticks,y=yticks,name=yticks.name,mode='lines',line=dict(width=0.5,color=colors_pallete[idx % len(colors_pallete)]),fill='tozerox') for idx, yticks in enumerate(ys)]
+        layout = go.Layout(
+            title = title or "areachart",
+            showlegend=True,
+            xaxis=dict(
+                title=xlabel,
+                type='category',
+            ),
+            yaxis=dict(
+                title=ylabel,
+                type='linear',
+                # range=[0, 3],
+                # dtick=20,
+                ticksuffix=''
+            )
+        )
+        fig = go.Figure(data=data, layout=layout)
+        plotly.offline.iplot(fig, filename='kql-areachart-plot')
+        return fig
+
+
+    def render_stackedareachart_plotly(self, key_word_sep=" ", title=None, **kwargs):
+        """Generates a pylab plot from the result set.
+
+        ``matplotlib`` must be installed, and in an
+        IPython Notebook, inlining must be on::
+
+            %%matplotlib inline
+
+        Stacked area graph. First column is x-axis, and should be a datetime column. Other numeric columns are y-axes.
+
+        Parameters
+        ----------
+        title: Plot title, defaults to names of Y value columns
+
+        Any additional keyword arguments will be passsed
+        through to ``matplotlib.pylab.plot``.
+        """
+
+        import plotly
+        plotly.offline.init_notebook_mode(connected=True)
+
+        import plotly.plotly as py
+        import plotly.graph_objs as go
+
+        colors_pallete = ['rgb(184, 247, 212)', 'rgb(111, 231, 219)', 'rgb(127, 166, 238)', 'rgb(131, 90, 241)' ]
+
         self.build_columns()
         quantity_columns = [c for c in self.columns if c.is_quantity]
         if len(quantity_columns) < 2:
             return None
-        x = quantity_columns[0]
+        if not quantity_columns[0].is_datetime:
+            return None
+
+        xticks = quantity_columns[0]
         ys = quantity_columns[1:]
+        ys_stcks = []
+        y_stck = [0 for x in range(len(ys[0]))]
+        for y in ys:
+            y_stck = [r + y_stck[idx] for (idx, r) in enumerate(y)]
+            ys_stcks.append(y_stck)
         ylabel = ", ".join([c.name for c in ys])
-        xlabel = x.name
-
-        coords = functools.reduce(operator.add, [(x, y) for y in ys])
-        plot = plt.plot(*coords, **kwargs)
-        plt.xticks(range(len(x)), x, rotation = 45)
-        plt.title(title or ylabel)
-        plt.xlabel(xlabel)
-        plt.ylabel(ylabel)
-        if self.show_chart:
-            plt.show()
-        return plot
-
-
-
-    def render_anomalychart(self, key_word_sep=" ", title=None, **kwargs):
-        import plotly
-        plotly.offline.init_notebook_mode(connected=True)
-
-        import numpy as np
-        import matplotlib.pyplot as plt
-        import plotly.plotly as py
-        import plotly.graph_objs as go
-
-
-        # create our stacked data manually
-        y0 = np.random.rand(100)
-        y1 = y0 + np.random.rand(100)
-        y2 = y1 + np.random.rand(100)
-        capacity = 3*np.ones(100)
-
-        x0 = list(range(len(y0)))
-
-        trace0 = go.Scatter(
-            x=x0,
-            y=y0,
-            mode='lines',
-            line=dict(width=0.5,
-                      color='rgb(184, 247, 212)'),
-            fill='tonexty'
-        )
-        trace1 = go.Scatter(
-            x=x0,
-            y=y1,
-            mode='lines',
-            line=dict(width=0.5,
-                      color='rgb(111, 231, 219)'),
-            fill='tonexty'
-        )
-        trace2 = go.Scatter(
-            x=x0,
-            y=y2,
-            mode='lines',
-            line=dict(width=0.5,
-                      color='rgb(127, 166, 238)'),
-            fill='tonexty'
-        )
-
-        traceC = go.Scatter(
-            x=x0,
-            y=capacity,
-            mode='lines',
-            line=dict(width=0.5,
-                      color='rgb(131, 90, 241)'),
-            fill='tonexty'
-        )
-        data = [trace0, trace1, trace2, traceC]
+        xlabel = xticks.name
+        data = [go.Scatter(x=xticks,y=yticks,name=ys[idx].name,mode='lines',line=dict(width=0.5,color=colors_pallete[idx % len(colors_pallete)]),fill='tonexty') for idx, yticks in enumerate(ys_stcks)]
         layout = go.Layout(
+            title = title or "stackedareachart",
             showlegend=True,
             xaxis=dict(
-                type='category',
+                title=xlabel,
+                type='date',
             ),
             yaxis=dict(
+                title=ylabel,
                 type='linear',
-                range=[0, 3],
-                dtick=20,
-                ticksuffix='%'
+                # range=[0, 3],
+                # dtick=20,
+                ticksuffix=''
             )
         )
         fig = go.Figure(data=data, layout=layout)
-        plotly.offline.iplot(fig, filename='stacked-area-plot')
+        plotly.offline.iplot(fig, filename='kql-stackedareachart-plot')
         return fig
+
+
+    def render_timechart_plotly(self, key_word_sep=" ", title=None, **kwargs):
+        """Generates a pylab plot from the result set.
+
+        ``matplotlib`` must be installed, and in an
+        IPython Notebook, inlining must be on::
+
+            %%matplotlib inline
+
+        Line graph. First column is x-axis, and should be datetime. Other columns are y-axes.
+
+        Parameters
+        ----------
+        title: Plot title, defaults to names of Y value columns
+
+        Any additional keyword arguments will be passsed
+        through to ``matplotlib.pylab.plot``.
+        """
+
+        import plotly
+        plotly.offline.init_notebook_mode(connected=True)
+
+        import plotly.plotly as py
+        import plotly.graph_objs as go
+
+        colors_pallete = ['rgb(184, 247, 212)', 'rgb(111, 231, 219)', 'rgb(127, 166, 238)', 'rgb(131, 90, 241)' ]
+
+        self.build_columns()
+        quantity_columns = [c for c in self.columns if c.is_quantity]
+        if len(quantity_columns) < 2:
+            return None
+        if not quantity_columns[0].is_datetime:
+            return None
+
+        xticks = quantity_columns[0]
+        ys = quantity_columns[1:]
+        ylabel = ", ".join([c.name for c in ys])
+        xlabel = xticks.name
+        data = [go.Scatter(
+                                x=xticks,
+                                y=yticks,
+                                name = yticks.name,
+                                line=dict(
+                                    width=0.5,
+                                    color=colors_pallete[idx % len(colors_pallete)]
+                                ),
+                                opacity = 0.8
+                          ) 
+                for idx, yticks in enumerate(ys)]
+        layout = go.Layout(
+            title = title or "timechart",
+            showlegend=True,
+            xaxis=dict(
+                rangeselector=dict(
+                    buttons=list([
+                        dict(count=1,
+                             label='1m',
+                             step='month',
+                             stepmode='backward'),
+                        dict(count=6,
+                             label='6m',
+                             step='month',
+                             stepmode='backward'),
+                        dict(step='all')
+                    ])
+                ),
+                rangeslider=dict(),
+                title=xlabel,
+                type='date'
+            ),
+           yaxis=dict(
+                title=ylabel,
+                type='linear',
+                # range=[0, 3],
+                # dtick=20,
+                ticksuffix=''
+            )
+        )
+        fig = go.Figure(data=data, layout=layout)
+        plotly.offline.iplot(fig, filename=kwargs.get('filename') or 'kql-timechart-plot')
+        return fig
+
+
+
+    def render_linechart_plotly(self, key_word_sep=" ", title=None, **kwargs):
+        """Generates a pylab plot from the result set.
+
+        ``matplotlib`` must be installed, and in an
+        IPython Notebook, inlining must be on::
+
+            %%matplotlib inline
+
+        Line graph. First column is x-axis, and should be numeric. Other columns are y-axes.
+
+        Parameters
+        ----------
+        title: Plot title, defaults to names of Y value columns
+
+        Any additional keyword arguments will be passsed
+        through to ``matplotlib.pylab.plot``.
+        """
+
+        import plotly
+        plotly.offline.init_notebook_mode(connected=True)
+
+        import plotly.plotly as py
+        import plotly.graph_objs as go
+
+        colors_pallete = ['rgb(184, 247, 212)', 'rgb(111, 231, 219)', 'rgb(127, 166, 238)', 'rgb(131, 90, 241)' ]
+
+        self.build_columns()
+        quantity_columns = [c for c in self.columns if c.is_quantity]
+        if len(quantity_columns) < 2:
+            return None
+
+        self.build_columns(quantity_columns[0].name)
+        quantity_columns = [c for c in self.columns if c.is_quantity]
+
+        xticks = quantity_columns[0]
+        ys = quantity_columns[1:]
+        ylabel = ", ".join([c.name for c in ys])
+        xlabel = xticks.name
+        data = [go.Scatter(
+                                x=xticks,
+                                y=yticks,
+                                name = yticks.name,
+                                line=dict(
+                                    width=1,
+                                    color=colors_pallete[idx % len(colors_pallete)]
+                                ),
+                                opacity = 0.8
+                          ) 
+                for idx, yticks in enumerate(ys)]
+        layout = go.Layout(
+            title = title or "linechart",
+            showlegend=True,
+            xaxis=dict(
+                title=xlabel,
+                # type='linear',
+            ),
+           yaxis=dict(
+                title=ylabel,
+                type='linear',
+                # range=[0, 3],
+                # dtick=20,
+                # ticksuffix=''
+            )
+        )
+        fig = go.Figure(data=data, layout=layout)
+        plotly.offline.iplot(fig, filename='kql-linechart-plot')
+        return fig
+
+
+    def render_scatterchart_plotly(self, key_word_sep=" ", title=None, **kwargs):
+        """Generates a pylab plot from the result set.
+
+        ``matplotlib`` must be installed, and in an
+        IPython Notebook, inlining must be on::
+
+            %%matplotlib inline
+
+        First column is x-axis, and should be a numeric column. Other numeric columns are y-axes.
+        kind = default, unstacked, stacked, stacked100 
+
+        Parameters
+        ----------
+        title: Plot title, defaults to names of Y value columns
+
+        Any additional keyword arguments will be passsed
+        through to ``matplotlib.pylab.plot``.
+        """
+
+        import plotly
+        plotly.offline.init_notebook_mode(connected=True)
+
+        import plotly.plotly as py
+        import plotly.graph_objs as go
+
+        colors_pallete = ['rgb(184, 247, 212)', 'rgb(111, 231, 219)', 'rgb(127, 166, 238)', 'rgb(131, 90, 241)' ]
+
+        self.build_columns()
+        quantity_columns = [c for c in self.columns[1:] if c.is_quantity]
+        if len(quantity_columns) < 1:
+            return None
+
+        xticks = self.columns[0]
+        ys = quantity_columns
+
+        ylabel = ", ".join([c.name for c in ys])
+        xlabel = xticks.name
+        data = [go.Scatter(x=xticks,y=yticks,name=yticks.name,mode='markers',marker=dict(line=dict(width=1),color=colors_pallete[idx % len(colors_pallete)])) for idx, yticks in enumerate(ys)]
+        layout = go.Layout(
+            title = title or "scatterchart",
+            showlegend=True,
+            xaxis=dict(
+                title=xlabel,
+                type='category',
+            ),
+            yaxis=dict(
+                title=ylabel,
+                type='linear',
+                # range=[0, 3],
+                # dtick=20,
+                ticksuffix=''
+            )
+        )
+        fig = go.Figure(data=data, layout=layout)
+        plotly.offline.iplot(fig, filename='kql-scatterchart-plot')
+        return fig
+
+
+
+    def render_anomalychart_plotly(self, key_word_sep=" ", title=None, **kwargs):
+        return self.render_timechart_plotly(key_word_sep, title or "anomalychart", fieldnames='kql-anomalychart-plot', **kwargs)
 
 
 class PrettyTable(prettytable.PrettyTable):

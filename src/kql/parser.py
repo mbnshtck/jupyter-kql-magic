@@ -32,13 +32,20 @@ class Parser(object):
             # for k,v in cfg_dict:
             #     cfg_dict_lower[k.lower()] = v
             cfg_dict_lower = {k.lower(): v for (k,v) in cfg_dict.items()}
-            if cfg_dict_lower.get('user'):
-                cfg_dict_lower['username'] = cfg_dict_lower.get('user')
-            connection_list = []
-            for key in ['username','password','cluster','database']:
-                if cfg_dict_lower.get(key):
-                    connection_list.append(str.format("{0}('{1}')", key, cfg_dict_lower.get(key)))
-            connection = 'kusto://' + '.'.join(connection_list)
+            if cfg_dict_lower.get('appid') or cfg_dict_lower.get('appkey'):
+                connection_list = []
+                for key in ['appid','appkey']:
+                    if cfg_dict_lower.get(key):
+                        connection_list.append(str.format("{0}('{1}')", key, cfg_dict_lower.get(key)))
+                connection = 'appinsights://' + '.'.join(connection_list)
+            else:
+                if cfg_dict_lower.get('user'):
+                    cfg_dict_lower['username'] = cfg_dict_lower.get('user')
+                connection_list = []
+                for key in ['username','password','cluster','database']:
+                    if cfg_dict_lower.get(key):
+                        connection_list.append(str.format("{0}('{1}')", key, cfg_dict_lower.get(key)))
+                connection = 'kusto://' + '.'.join(connection_list)
             print (connection)
 
             code = parts[1] if len(parts) > 1 else ''
@@ -46,6 +53,9 @@ class Parser(object):
         # connection taken from first line, new full connection
         #
         elif parts[0].startswith('kusto://'):
+            connection = parts[0]
+            code = parts[1] if len(parts) > 1 else ''
+        elif parts[0].startswith('appinsights://'):
             connection = parts[0]
             code = parts[1] if len(parts) > 1 else ''
         #

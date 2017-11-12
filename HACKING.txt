@@ -36,6 +36,7 @@ To make a release,
   3. >set TEST_CONNECTION_STR=kusto://username('michabin@microsoft.com').password('g=Hh-h34G').cluster('Oiildc').database('OperationInsights_PFS_PROD')
   4. >set CONNECTION_STR=kusto://username('michabin@microsoft.com').password('g=Hh-h34G').cluster('Oiildc').database('OperationInsights_PFS_PROD')
   5. >set HELP_CONNECTION_STR=kusto://username('michabin@microsoft.com').password('g=Hh-h34G').cluster('help').database('Samples')
+  6. >
   3  >ipython -c "import nose; nose.run()"
 
   Add to Jupyter Notebook
@@ -47,6 +48,43 @@ To make a release,
   View/Toggle Header 
   View/Toggle Toolbar
   Kernel/Restart & Clear Output
+
+  Visualization Technologies
+  PlotLy (PlotLy)
+  PixieDust (IBM)
+
+  Notes for Jupyter Notebbok
+      conda install -c conda-forge ipywidgets
+
+
+  Notes for jupyter labs environment:
+    1. need to install npm (and restart computer), to be able to install extensions
+    2. A Plotly - enables use of plotly offline:
+        jupyter labextension install @jupyterlab/plotly-extension
+        jupyter labextension enable @jupyterlab/plotly-extension
+    3. Add jupyter widgets extension:
+        jupyter labextension install @jupyter-widgets/jupyterlab-manager@0.27.0
+        jupyter labextension enable @jupyter-widgets/jupyterlab-manager
+    4. Add qgrid extension:
+        jupyter labextension install qgrid-jupyterlab@1.0.0-beta.7
+        jupyter labextension enable qgrid-jupyterlab
+
+    3. A JupyterLab extension for rendering JSON as a tree:
+        jupyter labextension install @jupyterlab/json-extension
+
+Update jupyter
+conda update jupyter
+
+run commandline
+activate environment
+  C:\Users\michabin\AppData\Local\Continuum\Anaconda3\Scripts\activate
+  set TEST_CONNECTION_STR=kusto://username('michabin@microsoft.com').password('g=Hh-h34G').cluster('Oiildc').database('OperationInsights_PFS_PROD')
+  set CONNECTION_STR=kusto://username('michabin@microsoft.com').password('g=Hh-h34G').cluster('Oiildc').database('OperationInsights_PFS_PROD')
+  set HELP_CONNECTION_STR=kusto://username('michabin@microsoft.com').password('g=Hh-h34G').cluster('help').database('Samples')
+  cd c:\My Projects
+set Path=C:\Users\michabin\AppData\Local\Continuum\Anaconda3;%Path%
+
+
 
 
 

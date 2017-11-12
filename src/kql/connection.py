@@ -1,6 +1,7 @@
 import os
 from kql.kusto_proxy import KustoProxy
 from kql.kusto_engine import KustoEngine
+from kql.ai_engine import AppinsightsEngine
 
 class ConnectionError(Exception):
     pass
@@ -11,32 +12,34 @@ class Connection(object):
     connections = {}
 
     @classmethod
-    def tell_format(cls):
-        return """Connection info needed in KQL Magic format, example:
-               kusto://username('username').password('password').cluster('clustername').database('databasename')
-               kusto://username('username').password('password').cluster('clustername')
-               kusto://username('username').password('password')
-               kusto://cluster('clustername').database('databasename')
-               kusto://cluster('clustername')
-               kusto://database('databasename')
-               or an existing connection: %s""" % str(cls.connections.keys())
+    def tell_format(cls, str1 = None, str2 = None):
+        return """Connection info needed in KQL Magic format, example:{0}{1}
+               or an existing connection: {2}
+                   """.format( str1, str2, str(Connection.connection_list()))
 
     # Object constructor
     def __init__(self, connect_str=None):
+        if connect_str.startswith('kusto://'):
+            engine = KustoEngine
+        elif connect_str.startswith('appinsights://'):
+            engine = AppinsightsEngine
+        else:
+            print(Connection.tell_format(KustoEngine.tell_format(), AppinsightsEngine.tell_format()))
+            raise ConnectionError('invalid connection_str, unknown schema. valid schemas are: "kusto://" and "appinsights://"')
         try:
-            engine = KustoEngine(connect_str, Connection.current)
+            conn = engine(connect_str, Connection.current)
         except: # TODO: bare except; but what's an ArgumentError?
-            print(Connection.tell_format())
+            print(Connection.tell_format(engine.tell_format()))
             raise
-        Connection.current = engine
-        if engine.bind_url:
-            if self.connections.get(engine.bind_url):
-                Connection.current = self.connections[engine.bind_url]
+        Connection.current = conn
+        if conn.bind_url:
+            if self.connections.get(conn.bind_url):
+                Connection.current = self.connections[conn.bind_url]
             else:
-                name = self.assign_name(engine)
-                engine.set_name(name)
-                self.connections[name] = engine
-                self.connections[engine.bind_url] = engine
+                name = self.assign_name(conn)
+                conn.set_name(name)
+                self.connections[name] = conn
+                self.connections[conn.bind_url] = conn
 
     @classmethod
     def set(cls, descriptor):
@@ -71,12 +74,16 @@ class Connection(object):
 
     @classmethod
     def connection_list(cls):
+        return [k for k in sorted(cls.connections) if cls.connections[k].bind_url != k]
+
+
+    @classmethod
+    def connection_list_formatted(cls):
         result = []
-        for key in sorted(cls.connections):
-            if cls.connections[key].bind_url != key:
-                if cls.connections[key] == cls.current:
-                    template = ' * {}'
-                else:
-                    template = '   {}'
-                result.append(template.format(key))
+        for key in Connection.connection_list():
+            if cls.connections[key] == cls.current:
+                template = ' * {}'
+            else:
+                template = '   {}'
+            result.append(template.format(key))
         return '\n'.join(result)

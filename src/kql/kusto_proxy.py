@@ -1,8 +1,6 @@
 import os.path
 import json
-from kusto_client import KustoClient
 import requests
-
 
 class KustoRow(object):
     def __init__(self, row, col_num):
@@ -83,7 +81,7 @@ class KustoRowsIter(object):
         return self.last
 
 
-class KustoResponse(object):
+class KqlResponse(object):
     # Object constructor
     def __init__(self, response):
         self.data_records_index = 0
@@ -158,24 +156,11 @@ class KustoProxy(object):
         self.headers = None
         self.rows = None
         self.code = code
-        return self.__kusto_client_execute(code, self.conn)
-
-
-    def __kusto_client_execute(self, code, conn):
         if code.strip():
-            if not conn.kusto_client:
-                if not conn.cluster_url:
-                    raise ConnectionError("Cluster is not defined.")
-                if not conn.username or not conn.password:
-                    raise ConnectionError("Username and Password are not defined.")
-                kusto_client = KustoClient(kusto_cluster=conn.cluster_url, client_id=conn.client_id, username=conn.username, password=conn.password)
-                conn.set_kusto_client(kusto_client)
+            client = self.conn.get_client()
 
-            if not conn.database_name:
-                raise ConnectionError("Database is not defined.")
-            response = conn.kusto_client.execute(conn.database_name, code, False)
-            # response = conn.kusto_client.execute(kusto_database=conn.database_name, query=code, accept_partial_results= False)
-            return KustoResponse(response)
+            response = client.execute(self.conn.database_name, code, False)
+            return KqlResponse(response)
 
 
     __kusto_python_client_version__ = '0.4.0'

@@ -22,6 +22,7 @@ except ImportError:
 
 from kql.connection import Connection
 from kusto_client import KustoError
+from kql.ai_client import AppinsightsError
 
 from kql.runner import Runner
 from kql.parser import Parser
@@ -104,7 +105,7 @@ class KqlMagic(Magics, Configurable):
         flags = parsed['flags']
         try:
             if not parsed['connection'] and Connection.connections and self.show_conn_list:
-                print(Connection.connection_list())
+                print(Connection.connection_list_formatted())
             Connection.set(parsed['connection'])
             conn = Connection.current
         except Exception as e:
@@ -120,7 +121,8 @@ class KqlMagic(Magics, Configurable):
             saved_result = result
             if result is not None and not isinstance(result, str):
                 if self.feedback:
-                    print('Done ({}): {} records'.format(str(elapsed_time), result.records_count))
+                    minutes, seconds = divmod(elapsed_time, 60)
+                    print('Done ({:0>2}:{:06.3f}): {} records'.format(int(minutes), seconds, result.records_count))
 
                 logger().debug("Results: {} x {}".format(len(result), len(result.keys)))
                 keys = result.keys
@@ -164,7 +166,7 @@ class KqlMagic(Magics, Configurable):
                 return None
             return result
 
-        except (KustoError) as e:
+        except (KustoError, AppinsightsError) as e:
             if self.short_errors:
                 print(e)
             else:
