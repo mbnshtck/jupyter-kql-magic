@@ -11,9 +11,9 @@ from IPython.display import display_javascript
 try:
     from traitlets.config.configurable import Configurable
     from traitlets import Bool, Int, Unicode, HasTraits, Unicode, validate, TraitError
-except ImportError:
-    from IPython.config.configurable import Configurable # depricated since IPython 4.0
-    from IPython.utils.traitlets import Bool, Int, Unicode
+# except ImportError:
+#     from IPython.config.configurable import Configurable # depricated since IPython 4.0
+#     from IPython.utils.traitlets import Bool, Int, Unicode
 
 try:
     from pandas.core.frame import DataFrame, Series
@@ -60,7 +60,7 @@ class KqlMagic(Magics, Configurable):
     plotly_fs_includejs = Bool(False, config=True, help="Include plotly javascript code to fullscreen HTMLs, if set to  False (default), it download from https://cdn.plot.ly/plotly-latest.min.js. Abbreviation: pfi")
 
     validate_connection_string = Bool(True, config=True, help="Validate connectionString with an implicit query, when query statement is missing. Abbreviation: vc")
-    version = Unicode(VERSION, config=True, help="kqlmagic version")
+    version = Unicode(VERSION, config=True, read_only=True, help="kqlmagic version")
 
     @validate('version')
     def _immutable_version(self, proposal):
