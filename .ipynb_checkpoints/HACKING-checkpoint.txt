@@ -78,15 +78,10 @@ conda update jupyter
 run commandline
 activate environment
   C:\Users\michabin\AppData\Local\Continuum\Anaconda3\Scripts\activate
-  set TEST_CONNECTION_STR=kusto://username('michabin@microsoft.com').password('z=Xx-h34Z').cluster('Oiildc').database('OperationInsights_PFS_PROD')
-  set CONNECTION_STR=kusto://username('michabin@microsoft.com').password('z=Xx-h34Z').cluster('Oiildc').database('OperationInsights_PFS_PROD')
-
-  set HELP_CONNECTION_STR=kusto://username('michabin@microsoft.com').password('z=Xx-h34Z').cluster('help').database('Samples')
-  set HELP_CONNECTION_STR=kusto://username('michabin@microsoft.com').cluster('help').database('Samples')
-  set HELP_CONNECTION_STR=kusto://code().cluster('help').database('Samples')
-
+  set TEST_CONNECTION_STR=kusto://username('michabin@microsoft.com').password('j=Kk-h34J').cluster('Oiildc').database('OperationInsights_PFS_PROD')
+  set CONNECTION_STR=kusto://username('michabin@microsoft.com').password('j=Kk-h34J').cluster('Oiildc').database('OperationInsights_PFS_PROD')
+  set HELP_CONNECTION_STR=kusto://username('michabin@microsoft.com').password('j=Kk-h34J').cluster('help').database('Samples')
   cd c:\My Projects
-  jupyter lab | jupyter notebook
 // set Path=C:\Users\michabin\AppData\Local\Continuum\Anaconda3;%Path%
 
 

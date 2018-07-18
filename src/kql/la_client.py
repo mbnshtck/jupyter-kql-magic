@@ -11,10 +11,10 @@ TIMESPAN_PATTERN = re.compile(r'((?P<d>[0-9]*).)?(?P<h>[0-9]{2}):(?P<m>[0-9]{2})
 
 __version__ = '0.1.0'
 
-class AppinsightsResult(dict):
+class LoganalyticsResult(dict):
     """ Simple wrapper around dictionary, to enable both index and key access to rows in result """
     def __init__(self, index2column_mapping, *args, **kwargs):
-        super(AppinsightsResult, self).__init__(*args, **kwargs)
+        super(LoganalyticsResult, self).__init__(*args, **kwargs)
         # TODO: this is not optimal, if client will not access all fields.
         # In that case, we are having unnecessary perf hit to convert Timestamp, even if client don't use it.
         # In this case, it would be better for KustoResult to extend list class. In this case,
@@ -29,7 +29,7 @@ class AppinsightsResult(dict):
         return val
 
 
-class AppinsightsResultIter(object):
+class LoganalyticsResultIter(object):
     """ Iterator over returned rows """
     def __init__(self, json_result):
         self.json_result = json_result
@@ -83,10 +83,10 @@ class AppinsightsResultIter(object):
                 else:
                     result_dict[self.index2column_mapping[index]] = value
             self.next = self.next + 1
-            return AppinsightsResult(self.index2column_mapping, result_dict)
+            return LoganalyticsResult(self.index2column_mapping, result_dict)
 
 
-class AppinsightsResponse(object):
+class LoganalyticsResponse(object):
     """ Wrapper for response """
     # TODO: add support to get additional infromation from response, like execution time
 
@@ -109,23 +109,23 @@ class AppinsightsResponse(object):
         """ Returns iterator to get rows from response """
         # TODO: we called this fethall to resemble Python DB API,
         # but this can be as easily called result or similar
-        return AppinsightsResultIter(self.json_response['Tables'][table_id])
+        return LoganalyticsResultIter(self.json_response['Tables'][table_id])
 
     def iter_all(self, table_id=0):
         """ Returns iterator to get rows from response """
         # TODO: we called this fethall to resemble Python DB API,
         # but this can be as easily called result or similar
-        return AppinsightsResultIter(self.json_response['Tables'][table_id])
+        return LoganalyticsResultIter(self.json_response['Tables'][table_id])
 
 # used in kqlMagic
-class AppinsightsError(Exception):
+class LoganalyticsError(Exception):
     """
     Represents error returned from server. Error can contain partial results of the executed query.
     """
-    def __init__(self, messages, http_response, appinsights_response = None):
-        super(AppinsightsError, self).__init__(messages)
+    def __init__(self, messages, http_response, loganalytics_response = None):
+        super(LoganalyticsError, self).__init__(messages)
         self.http_response = http_response
-        self.appinsights_response = appinsights_response
+        self.loganalytics_response = loganalytics_response
 
     def get_raw_http_response(self):
         return self.http_response
@@ -134,33 +134,33 @@ class AppinsightsError(Exception):
         return self.http_response.text.startswith("Semantic error:")
 
     def has_partial_results(self):
-        return self.appinsights_response is not None
+        return self.loganalytics_response is not None
 
     def get_partial_results(self):
-        return self.appinsights_response
+        return self.loganalytics_response
 
-class AppinsightsClient(object):
+class LoganalyticsClient(object):
     """
     Kusto client wrapper for Python.
 
-    AppinsightsClient works with both 2.x and 3.x flavors of Python. All primitive types are supported.
-    AppinsightsClient takes care of ADAL authentication, parsing response and giving you typed result set,
+    LoganalyticsClient works with both 2.x and 3.x flavors of Python. All primitive types are supported.
+    LoganalyticsClient takes care of ADAL authentication, parsing response and giving you typed result set,
     and offers familiar Python DB API.
 
     Test are run using nose.
 
     Examples
     --------
-    To use AppinsightsClient, you can choose betwen two ways of authentication.
+    To use LoganalyticsClient, you can choose betwen two ways of authentication.
      
     For the first option, you'll need to have your own AAD application and know your client credentials (client_id and client_secret).
     >>> kusto_cluster = 'https://help.kusto.windows.net'
-    >>> kusto_client = AppinsightsClient(kusto_cluster, client_id, client_secret='your_app_secret')
+    >>> kusto_client = LoganalyticsClient(kusto_cluster, client_id, client_secret='your_app_secret')
 
-    For the second option, you can use AppinsightsClient's client id and authenticate using your username and password.
+    For the second option, you can use LoganalyticsClient's client id and authenticate using your username and password.
     >>> kusto_cluster = 'https://help.kusto.windows.net'
     >>> client_id = 'e07cf1fb-c6a6-4668-b21a-f74731afa19a'
-    >>> kusto_client = AppinsightsClient(kusto_cluster, client_id, username='your_username', password='your_password')
+    >>> kusto_client = LoganalyticsClient(kusto_cluster, client_id, username='your_username', password='your_password')
 
     After connecting, use the kusto_client instance to execute a management command or a query: 
     >>> kusto_database = 'Samples'
@@ -170,7 +170,7 @@ class AppinsightsClient(object):
     >>>    print(row[0])
     >>>    print(row["ColumnName"])    """
 
-    def __init__(self, appid=None, appkey=None, version='v1'):
+    def __init__(self, workspace=None, appkey=None, version='v1'):
         """
         Kusto Client constructor.
 
@@ -190,12 +190,12 @@ class AppinsightsClient(object):
             REST API version, defaults to v1.
         """
 
-        self.cluster = 'https://api.applicationinsights.io'
+        self.cluster = 'https://api.loganalytics.io'
         self.version = version
-        self.appid = appid
+        self.workspace = workspace
         self.appkey = appkey
 
-    def execute(self, appid, query:str, accept_partial_results = False):
+    def execute(self, workspace, query:str, accept_partial_results = False):
         """ Execute a simple query
         
         Parameters
@@ -209,9 +209,9 @@ class AppinsightsClient(object):
             If this is True, results are returned to client, even if there are exceptions.
             If this is False, exception is raised. Default is False.
         """
-        return self.execute_query(appid, query, accept_partial_results)
+        return self.execute_query(workspace, query, accept_partial_results)
 
-    def execute_query(self, appid, query:str, accept_partial_results = False):
+    def execute_query(self, workspace, query:str, accept_partial_results = False):
         """ Execute a simple query 
         
         Parameters
@@ -227,7 +227,7 @@ class AppinsightsClient(object):
             If this is True, results are returned to client, even if there are exceptions.
             If this is False, exception is raised. Default is False.
         """
-        query_endpoint = '{0}/{1}/apps/{2}/query'.format(self.cluster, self.version, self.appid)
+        query_endpoint = '{0}/{1}/workspaces/{2}/query'.format(self.cluster, self.version, self.workspace)
         return self._execute(query, query_endpoint, accept_partial_results)
 
 
@@ -241,7 +241,7 @@ class AppinsightsClient(object):
         self.request_headers = {
             'Content-Type': 'application/json',
             'x-api-key': self.appkey,
-            'x-ms-client-version':'ApplicationInsights.Python.Client:' + __version__,
+            'x-ms-client-version':'LogAnalytics.Python.Client:' + __version__,
         }
         if self.version != 'beta':
             prefer_str = 'ai.response-thinning=false'
@@ -254,16 +254,16 @@ class AppinsightsClient(object):
         )
 
         if response.status_code == 200:
-            appinsights_response = AppinsightsResponse(response.json())
-            if appinsights_response.has_exceptions() and not accept_partial_results:
-                raise AppinsightsError(appinsights_response.get_exceptions(), response, appinsights_response)
-            # print('appinsights_response:', response.json())
-            return appinsights_response
+            loganalytics_response = LoganalyticsResponse(response.json())
+            if loganalytics_response.has_exceptions() and not accept_partial_results:
+                raise LoganalyticsError(loganalytics_response.get_exceptions(), response, loganalytics_response)
+            # print('loganalytics_response:', response.json())
+            return loganalytics_response
         else:
-            raise AppinsightsError([response.text,], response)
+            raise LoganalyticsError([response.text,], response)
 
     def _acquire_token(self):
-        token_response = self.adal_context.acquire_token(self.appinsights_cluster, self.username, self.client_id)
+        token_response = self.adal_context.acquire_token(self.loganalytics_cluster, self.username, self.client_id)
         if token_response is not None:
             expiration_date = dateutil.parser.parse(token_response['expiresOn'])
             if (expiration_date > datetime.utcnow() + timedelta(minutes=5)):
@@ -271,19 +271,19 @@ class AppinsightsClient(object):
                 
         if self.client_secret is not None and self.client_id is not None:
             token_response = self.adal_context.acquire_token_with_client_credentials(
-                self.appinsights_cluster,
+                self.loganalytics_cluster,
                 self.client_id,
                 self.client_secret)
         elif self.username is not None and self.password is not None:
             token_response = self.adal_context.acquire_token_with_username_password(
-                self.appinsights_cluster,
+                self.loganalytics_cluster,
                 self.username,
                 self.password,
                 self.client_id)
         else:
-            code = self.adal_context.acquire_user_code(self.appinsights_cluster, self.client_id)
+            code = self.adal_context.acquire_user_code(self.loganalytics_cluster, self.client_id)
             # print(code['message'])
             webbrowser.open(code['verification_url'])
-            token_response = self.adal_context.acquire_token_with_device_code(self.appinsights_cluster, code, self.client_id)
+            token_response = self.adal_context.acquire_token_with_device_code(self.loganalytics_cluster, code, self.client_id)
 
         return token_response['accessToken']

@@ -12,9 +12,8 @@ class Column(list):
     is_datetime = True
     name = ''
     # Object constructor
-    def __init__(self, *arg, **kwarg):
+    def __init__(self, *args, **kwargs):
         pass
-        
 
 def is_quantity(val):
     """Is ``val`` a quantity (int, float, datetime, etc) (not str, bool)?
@@ -36,7 +35,6 @@ class ColumnGuesserMixin(object):
             rows = sorted(self, key=lambda row: row[idx])   # sort by index
 
 
-        self.num_is_quantity = 0
         self.columns = [Column() for col in self.keys]
         for row in rows:
             for (col_idx, col_val) in enumerate(row):
@@ -53,6 +51,7 @@ class ColumnGuesserMixin(object):
 
         self.x = Column()
         self.ys = []
+
             
 
 
