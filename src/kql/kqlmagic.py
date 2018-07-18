@@ -21,6 +21,7 @@ except ImportError:
     DataFrame = None
     Series = None
 
+from kql.version import VERSION
 from kql.connection import Connection
 from azure.kusto.data import KustoError
 from kql.ai_client import AppinsightsError
@@ -59,7 +60,7 @@ class KqlMagic(Magics, Configurable):
     plotly_fs_includejs = Bool(False, config=True, help="Include plotly javascript code to fullscreen HTMLs, if set to  False (default), it download from https://cdn.plot.ly/plotly-latest.min.js. Abbreviation: pfi")
 
     validate_connection_string = Bool(True, config=True, help="Validate connectionString with an implicit query, when query statement is missing. Abbreviation: vc")
-    version = Unicode(True, config=True, help="Validate connectionString with an implicit query, when query statement is missing. Abbreviation: vc")
+    version = Unicode(VERSION, config=True, help="Validate connectionString with an implicit query, when query statement is missing. Abbreviation: vc")
 
 
     # [KUSTO]
