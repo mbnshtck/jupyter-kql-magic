@@ -8,18 +8,18 @@ logging.getLogger(KQLMAGIC_LOGGER_NAME).addHandler(logging.NullHandler())
 
 from IPython.core.magic import Magics, magics_class, cell_magic, line_magic, needs_local_scope
 from IPython.display import display_javascript
-try:
-    from traitlets.config.configurable import Configurable
-    from traitlets import Bool, Int, Unicode, HasTraits, Unicode, validate, TraitError
+# try:
+from traitlets.config.configurable import Configurable
+from traitlets import Bool, Int, Unicode, Enum
 # except ImportError:
 #     from IPython.config.configurable import Configurable # depricated since IPython 4.0
 #     from IPython.utils.traitlets import Bool, Int, Unicode
 
-try:
-    from pandas.core.frame import DataFrame, Series
-except ImportError:
-    DataFrame = None
-    Series = None
+# try:
+#     from pandas.core.frame import DataFrame, Series
+# except ImportError:
+#     DataFrame = None
+#     Series = None
 
 from kql.version import VERSION
 from kql.connection import Connection
@@ -41,7 +41,7 @@ class KqlMagic(Magics, Configurable):
     Provides the %%kql magic."""
 
     autolimit = Int(0, config=True, allow_none=True, help="Automatically limit the size of the returned result sets. Abbreviation: al")
-    style = Unicode('DEFAULT', config=True, help="Set the table printing style to any of prettytable's defined styles (currently DEFAULT, MSWORD_FRIENDLY, PLAIN_COLUMNS, RANDOM). . Abbreviation: st")
+    prettytable_style = Enum(['DEFAULT', 'MSWORD_FRIENDLY', 'PLAIN_COLUMNS', 'RANDOM'], 'DEFAULT', config=True, help="Set the table printing style to any of prettytable's defined styles. Abbreviation: ptst")
     short_errors = Bool(True, config=True, help="Don't display the full traceback on KQL Programming Error. Abbreviation: se")
     displaylimit = Int(None, config=True, allow_none=True, help="Automatically limit the number of rows displayed (full result set is still stored). Abbreviation: dl")
     autopandas = Bool(False, config=True, help="Return Pandas DataFrames instead of regular result sets. Abbreviation: ap")
@@ -53,20 +53,15 @@ class KqlMagic(Magics, Configurable):
                            "a kql connection string is formed from the "
                            "matching section in the DSN file. Abbreviation: dl")
     plot_package = Unicode('matplotlib', config=True, help="Set the plot package (currently matplotlib, plotly). Abbreviation: pp")
-    table_package = Unicode('prettytable', config=True, help="Set the table printing package (currently prettytable, pandas, plotly, qgrid). Abbreviation: tp")
+    # table_package = Unicode('prettytable', config=True, help="Set the table printing package (currently prettytable, pandas, plotly, qgrid). Abbreviation: tp")
+    table_package = Enum(['prettytable', 'pandas', 'plotly', 'qgrid'], 'prettytable', config=True, help="Set the table display package. Abbreviation: tp")
     last_raw_result_var = Unicode('_kql_raw_result_', config=True, help="Set the name of the variable that will contain last raw result. Abbreviation: var")
     enable_suppress_result = Bool(True, config=True, help="Suppress result when magic ends with a semicolon ;. Abbreviation: esr")
     show_query_time = Bool(True, config=True, help="Print query execution elapsed time. Abbreviation: sqt")
     plotly_fs_includejs = Bool(False, config=True, help="Include plotly javascript code to fullscreen HTMLs, if set to  False (default), it download from https://cdn.plot.ly/plotly-latest.min.js. Abbreviation: pfi")
 
     validate_connection_string = Bool(True, config=True, help="Validate connectionString with an implicit query, when query statement is missing. Abbreviation: vc")
-    version = Unicode(VERSION, config=True, read_only=True, help="kqlmagic version")
-
-    @validate('version')
-    def _immutable_version(self, proposal):
-         if self.version != proposal['value']:
-            raise TraitError("version is not configurable")
-         return self.version
+    version = Enum([VERSION], VERSION, config=True, help="kqlmagic version")
 
 
     # [KUSTO]

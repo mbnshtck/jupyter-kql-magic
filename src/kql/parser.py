@@ -148,8 +148,8 @@ class Parser(object):
                   'dl': {"abbreviation" : "displaylimit"},
                   'displaylimit': {"flag" : "displaylimit", "type" : "int", "config" : "config.displaylimit"},
 
-                  'st': {"abbreviation" : "style"},
-                  'style': {"flag" : "style", "type" : "str", "config" : "config.style"},
+                  'ptst': {"abbreviation" : "prettytable_style"},
+                  'prettytable_style': {"flag" : "prettytable_style", "type" : "str", "config" : "config.prettytable_style"},
 
                   'var': {"abbreviation" : "last_raw_result_var"},
                   'last_raw_result_var': {"flag" : "last_raw_result_var", "type" : "str", "config" : "config.last_raw_result_var"},

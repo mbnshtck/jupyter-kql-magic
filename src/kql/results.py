@@ -129,7 +129,7 @@ class ResultSet(list, ColumnGuesserMixin):
         self._dataframe = None
 
         # table printing style to any of prettytable's defined styles (currently DEFAULT, MSWORD_FRIENDLY, PLAIN_COLUMNS, RANDOM)
-        self.style = prettytable.__dict__[self.flags.get("style", "DEFAULT").upper()]
+        self.prettytable_style = prettytable.__dict__[self.flags.get("prettytable_style", "DEFAULT").upper()]
 
         self.display_info = False
         self.suppress_result = False
@@ -144,7 +144,7 @@ class ResultSet(list, ColumnGuesserMixin):
                 list.__init__(self, queryResult.fetchall())
 
             self.field_names = unduplicate_field_names(self.keys)
-            self.pretty = PrettyTable(self.field_names, style=self.style)
+            self.pretty = PrettyTable(self.field_names, style=self.prettytable_style)
             self.records_count = queryResult.recordscount()
             self.visualization = queryResult.visualization_property("Visualization")
             self.title = queryResult.visualization_property("Title")

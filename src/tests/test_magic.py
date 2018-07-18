@@ -50,7 +50,7 @@ def test_print():
 
 @with_setup(_setup, _teardown)
 def test_plain_style():
-    ip.run_line_magic('config', "KqlMagic.style = 'PLAIN_COLUMNS'")
+    ip.run_line_magic('config', "KqlMagic.prettytable_style = 'PLAIN_COLUMNS'")
     result = ip.run_line_magic('kql', query1)
     print(result)
     assert result[0][0] == 1

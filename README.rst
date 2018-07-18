@@ -177,7 +177,7 @@ only the screen display is truncated.
     SqlMagic.short_errors=<Bool>
         Current: True
         Don't display the full traceback on KQL Programming Error
-    KqlMagic.style=<Unicode>
+    KqlMagic.prettytable_style=<Unicode>
         Current: 'DEFAULT'
         Set the table printing style to any of prettytable's defined styles
         (currently DEFAULT, MSWORD_FRIENDLY, PLAIN_COLUMNS, RANDOM)
