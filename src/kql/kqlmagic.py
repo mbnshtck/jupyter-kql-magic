@@ -10,7 +10,7 @@ from IPython.core.magic import Magics, magics_class, cell_magic, line_magic, nee
 from IPython.display import display_javascript
 try:
     from traitlets.config.configurable import Configurable
-    from traitlets import Bool, Int, Unicode
+    from traitlets import Bool, Int, Unicode, HasTraits, Unicode, validate, TraitError
 except ImportError:
     from IPython.config.configurable import Configurable # depricated since IPython 4.0
     from IPython.utils.traitlets import Bool, Int, Unicode
