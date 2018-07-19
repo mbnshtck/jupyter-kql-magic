@@ -158,31 +158,31 @@ only the screen display is truncated.
 
 .. code-block:: python
 
-    In [2]: %config KqlMagic
-    KqlMagic options
+    In [2]: %config kqlmagic
+    kqlmagic options
     --------------
-    KqlMagic.autolimit=<Int>
+    kqlmagic.autolimit=<Int>
         Current: 0
         Automatically limit the size of the returned result sets
-    KqlMagic.autopandas=<Bool>
+    kqlmagic.autopandas=<Bool>
         Current: False
         Return Pandas DataFrames instead of regular result sets
-    KqlMagic.displaylimit=<Int>
+    kqlmagic.displaylimit=<Int>
         Current: 0
         Automatically limit the number of rows displayed (full result set is still
         stored)
-    KqlMagic.feedback=<Bool>
+    kqlmagic.feedback=<Bool>
         Current: True
         Print number of records returned, and assigned variables
-    SqlMagic.short_errors=<Bool>
+    kqlmagic.short_errors=<Bool>
         Current: True
         Don't display the full traceback on KQL Programming Error
-    KqlMagic.prettytable_style=<Unicode>
+    kqlmagic.prettytable_style=<Unicode>
         Current: 'DEFAULT'
         Set the table printing style to any of prettytable's defined styles
         (currently DEFAULT, MSWORD_FRIENDLY, PLAIN_COLUMNS, RANDOM)
 
-    In[3]: %config KqlMagic.feedback = False
+    In[3]: %config kqlmagic.feedback = False
 
 Please note: if you have autopandas set to true, the option will not apply. You can set the pandas display limit by using the pandas ``max_rows`` option as described in the `pandas documentation <http://pandas.pydata.org/pandas-docs/version/0.18.1/options.html#frequently-used-options>`_.
 

@@ -1,6 +1,6 @@
 from nose import with_setup
 from nose.tools import raises
-from kql.kqlmagic import KqlMagic
+from kql.kqlmagic import kqlmagic
 from textwrap import dedent
 import os.path
 import re
@@ -9,7 +9,7 @@ import tempfile
 ip = get_ipython()
 
 def setup():
-    kqlmagic = KqlMagic(shell=ip)
+    kqlmagic = kqlmagic(shell=ip)
     ip.register_magics(kqlmagic)
 
 def _setup():
@@ -50,7 +50,7 @@ def test_print():
 
 @with_setup(_setup, _teardown)
 def test_plain_style():
-    ip.run_line_magic('config', "KqlMagic.prettytable_style = 'PLAIN_COLUMNS'")
+    ip.run_line_magic('config', "kqlmagic.prettytable_style = 'PLAIN_COLUMNS'")
     result = ip.run_line_magic('kql', query1)
     print(result)
     assert result[0][0] == 1
@@ -112,11 +112,11 @@ def test_duplicate_column_names_accepted():
 
 @with_setup(_setup, _teardown)
 def test_autolimit():
-    ip.run_line_magic('config',  "KqlMagic.autolimit = 0")
+    ip.run_line_magic('config',  "kqlmagic.autolimit = 0")
     result = ip.run_line_magic('kql',  query1)
     print(result)
     assert len(result) == 2
-    ip.run_line_magic('config',  "KqlMagic.autolimit = 1")
+    ip.run_line_magic('config',  "kqlmagic.autolimit = 1")
     result = ip.run_line_magic('kql',  query1)
     print(result)
     assert len(result) == 1
@@ -129,14 +129,14 @@ query5 = """
         | sort by Result asc
         """
 def test_displaylimit():
-    ip.run_line_magic('config',  "KqlMagic.autolimit = None")
-    ip.run_line_magic('config',  "KqlMagic.displaylimit = None")
+    ip.run_line_magic('config',  "kqlmagic.autolimit = None")
+    ip.run_line_magic('config',  "kqlmagic.displaylimit = None")
     result = ip.run_line_magic('kql', query5)
     print(result)
     assert 'apple' in result._repr_html_()
     assert 'banana' in result._repr_html_()
     assert 'cherry' in result._repr_html_()
-    ip.run_line_magic('config',  "KqlMagic.displaylimit = 1")
+    ip.run_line_magic('config',  "kqlmagic.displaylimit = 1")
     assert 'apple' in result._repr_html_()
     assert 'cherry' not in result._repr_html_()
 
@@ -144,14 +144,14 @@ query6 = "$TEST_CONNECTION_STR let T = view () { datatable(first_name:string, la
 
 @with_setup(_setup, _teardown)
 def test_column_local_vars():
-    ip.run_line_magic('config',  "KqlMagic.column_local_vars = True")
+    ip.run_line_magic('config',  "kqlmagic.column_local_vars = True")
     result = ip.run_line_magic('kql', query6)
     print(result)
     assert result is None
     assert 'William' in ip.user_global_ns['first_name']
     assert 'Shakespeare' in ip.user_global_ns['last_name']
     assert len(ip.user_global_ns['first_name']) == 2
-    ip.run_line_magic('config',  "KqlMagic.column_local_vars = False")
+    ip.run_line_magic('config',  "kqlmagic.column_local_vars = False")
 
 @with_setup(_setup, _teardown)
 def test_userns_not_changed():
@@ -171,14 +171,14 @@ def test_bind_vars():
 
 @with_setup(_setup, _teardown)
 def test_autopandas():
-    ip.run_line_magic('config',  "KqlMagic.autopandas = True")
+    ip.run_line_magic('config',  "kqlmagic.autopandas = True")
     dframe = ip.run_cell("%kql {0}".format(query1))
     assert dframe.success
     assert dframe.result.name[0] == 'foo'
 
 @with_setup(_setup, _teardown)
 def test_csv():
-    ip.run_line_magic('config',  "KqlMagic.autopandas = False")  # uh-oh
+    ip.run_line_magic('config',  "kqlmagic.autopandas = False")  # uh-oh
     result = ip.run_line_magic('kql', query1)
     result = result.csv()
     for row in result.splitlines():
@@ -187,7 +187,7 @@ def test_csv():
 
 @with_setup(_setup, _teardown)
 def test_csv_to_file():
-    ip.run_line_magic('config',  "KqlMagic.autopandas = False")  # uh-oh
+    ip.run_line_magic('config',  "kqlmagic.autopandas = False")  # uh-oh
     result = ip.run_line_magic('kql', query1)
     with tempfile.TemporaryDirectory() as tempdir:
         fname = os.path.join(tempdir, 'test.csv')

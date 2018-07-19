@@ -8,18 +8,12 @@ logging.getLogger(KQLMAGIC_LOGGER_NAME).addHandler(logging.NullHandler())
 
 from IPython.core.magic import Magics, magics_class, cell_magic, line_magic, needs_local_scope
 from IPython.display import display_javascript
-# try:
+from IPython.core.display import display
+from IPython.core.magics.display import Javascript
+
+
 from traitlets.config.configurable import Configurable
 from traitlets import Bool, Int, Unicode, Enum
-# except ImportError:
-#     from IPython.config.configurable import Configurable # depricated since IPython 4.0
-#     from IPython.utils.traitlets import Bool, Int, Unicode
-
-# try:
-#     from pandas.core.frame import DataFrame, Series
-# except ImportError:
-#     DataFrame = None
-#     Series = None
 
 from kql.version import VERSION
 from kql.connection import Connection
@@ -35,7 +29,7 @@ from kql.log  import Logger, logger, set_logger, create_log_context, set_logging
 from kql.display  import Display
 
 @magics_class
-class KqlMagic(Magics, Configurable):
+class kqlmagic(Magics, Configurable):
     """Runs KQL statement on Kusto, specified by a connect string.
 
     Provides the %%kql magic."""
@@ -52,8 +46,7 @@ class KqlMagic(Magics, Configurable):
                            "When the first argument is of the form [section], "
                            "a kql connection string is formed from the "
                            "matching section in the DSN file. Abbreviation: dl")
-    plot_package = Unicode('matplotlib', config=True, help="Set the plot package (currently matplotlib, plotly). Abbreviation: pp")
-    # table_package = Unicode('prettytable', config=True, help="Set the table printing package (currently prettytable, pandas, plotly, qgrid). Abbreviation: tp")
+    plot_package = Enum(['matplotlib', 'plotly'], 'matplotlib', config=True, help="Set the plot package. Abbreviation: pp")
     table_package = Enum(['prettytable', 'pandas', 'plotly', 'qgrid'], 'prettytable', config=True, help="Set the table display package. Abbreviation: tp")
     last_raw_result_var = Unicode('_kql_raw_result_', config=True, help="Set the name of the variable that will contain last raw result. Abbreviation: var")
     enable_suppress_result = Bool(True, config=True, help="Suppress result when magic ends with a semicolon ;. Abbreviation: esr")
@@ -125,7 +118,7 @@ class KqlMagic(Magics, Configurable):
 
             [<sectionName>]
             # Note: connection string is built from the dsn file settings, section <sectionName>. 
-            #       The dsn filename value is taken from configuartion value KqlMagic.dsn_filename.
+            #       The dsn filename value is taken from configuartion value kqlmagic.dsn_filename.
 
             # Note: if password or appkey component is missing, user will be prompted.
             # Note: connection string doesn't have to include all components, see examples below.
@@ -199,6 +192,11 @@ class KqlMagic(Magics, Configurable):
 
 
     def execute_query(self, parsed, user_ns, result_set = None):
+
+        if Display.notebook_url is None:
+            # display(Javascript("""IPython.notebook.kernel.execute("NOTEBOOK_URL = '" + window.location + "'")"""))
+            Display.notebook_url = user_ns.get("NOTEBOOK_URL")
+            print('NOTEBOOK_URL = {0} '.format(Display.notebook_url))
 
         query = parsed['kql'].strip()
         flags = parsed['flags']
@@ -332,14 +330,14 @@ def load_ipython_extension(ip):
 
     # js = "IPython.CodeCell.config_defaults.highlight_modes['magic_kql'] = {'reg':[/^%%kql/]};"
     # display_javascript(js, raw=True)
-    kql_magic_load_mode = os.getenv('KQL_MAGIC_LOAD_MODE')
+    kql_magic_load_mode = os.getenv('KQLMAGIC_LOAD_MODE')
     if kql_magic_load_mode:
         kql_magic_load_mode = kql_magic_load_mode.strip().lower()
         if kql_magic_load_mode.startswith("'") or kql_magic_load_mode.startswith('"'):
             kql_magic_load_mode = kql_magic_load_mode[1:-1].strip()
     if kql_magic_load_mode != 'silent':
         messages = ["Kusto is a log analytics cloud platform optimized for ad-hoc big data queries. Read more about it here: http://aka.ms/kdocs",
-                    "Run '%config KqlMagic' for configuration.",
+                    "Run '%config kqlmagic' for configuration.",
                     "Run '%kql?' for syntax."]
         # Display.showInfoMessage(messages)
         html_str = """<html>
@@ -362,7 +360,7 @@ def load_ipython_extension(ip):
                 <div><img src='data:image/png;base64,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'></div>
                 <div>
                     <p>Kusto is a log analytics cloud platform optimized for ad-hoc big data queries. Read more about it here: http://aka.ms/kdocs</p>
-                    <p>Run '%config KqlMagic' for configuration.</p>
+                    <p>Run '%config kqlmagic' for configuration.</p>
                     <p>Run '%kql?' for syntax.</p>
                 </div>
             </div>
@@ -370,9 +368,10 @@ def load_ipython_extension(ip):
         </html>"""
         Display.show(html_str)
         #<div><img src='https://az818438.vo.msecnd.net/icons/kusto.png'></div>
-    result = ip.register_magics(KqlMagic)
+    result = ip.register_magics(kqlmagic)
     override_default_configuration(ip, kql_magic_load_mode)
     set_default_connections(ip, kql_magic_load_mode)
+    display(Javascript("""IPython.notebook.kernel.execute("NOTEBOOK_URL = '" + window.location + "'")"""))
     return result
 
 def unload_ipython_extension(ip):
@@ -381,10 +380,11 @@ def unload_ipython_extension(ip):
     del ip.magics_manager.magics['line']['kql']
 
 def override_default_configuration(ip, load_mode):
-    """override default KqlMagic configuration from environment variable KQL_MAGIC_CONFIGURATION.
+    """override default kqlmagic configuration from environment variable KQL_MAGIC_CONFIGURATION.
        the settings should be separated by a semicolon delimiter.
        for example:
        KQL_MAGIC_CONFIGURATION = 'autolimit = 1000; autopandas = True' """
+
     kql_magic_configuration = os.getenv('KQL_MAGIC_CONFIGURATION')
     if kql_magic_configuration:
         kql_magic_configuration = kql_magic_configuration.strip()
@@ -393,7 +393,7 @@ def override_default_configuration(ip, load_mode):
 
         pairs = kql_magic_configuration.split(';')
         for pair in pairs:
-            ip.run_line_magic('config',  'KqlMagic.{0}'.format(pair.strip()))
+            ip.run_line_magic('config',  'kqlmagic.{0}'.format(pair.strip()))
 
 def set_default_connections(ip, load_mode):
     kql_magic_connection_str = os.getenv('KQL_MAGIC_CONNECTION_STR')
@@ -459,14 +459,14 @@ Answer: Yes you can. Execute the Dataframe method on the result. For example:
 Can I get the kql query results as a dataframe instead of raw data?
 Answer: Yes you can. Set the kql magic configuration parameter autopandas to true, and all subsequent queries
         will return a dataframe instead of raw data (_kql_raw_result_ will continue to hold the raw results). For example:
-        %config KqlMagic.autopandas = True
+        %config kqlmagic.autopandas = True
         %kql var1 << T | where c > 100 // var1 will hold the dataframe
 
-If I use KqlMagic.autopandas = True, How can I get programmaticaly the last dataframe results of the last submitted query?
+If I use kqlmagic.autopandas = True, How can I get programmaticaly the last dataframe results of the last submitted query?
 Answer: Execute the Dataframe method on the result. For example:
         _kql_raw_result_.Dataframe()
 
-If I use KqlMagic.autopandas = True, How can I get programmaticaly the last raw results of the last submitted query?
+If I use kqlmagic.autopandas = True, How can I get programmaticaly the last raw results of the last submitted query?
 Answer: _kql_raw_result_ holds the raw results.
 
 """

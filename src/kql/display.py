@@ -2,6 +2,8 @@ import os.path
 import re
 import uuid
 from IPython.core.display import display, HTML
+from IPython.core.magics.display import Javascript
+
 
 
 
@@ -13,6 +15,7 @@ class Display(object):
     danger_style = {'color': '#b94a48', 'background-color': '#f2dede', 'border-color': '#eed3d7' }
     info_style = {'color': '#3a87ad', 'background-color': '#d9edf7', 'border-color': '#bce9f1' }
     warning_style = {'color': '#8a6d3b', 'background-color': '#fcf8e3', 'border-color': '#faebcc' }
+    notebook_url = None
 
     @staticmethod
     def show(html_str, **kwargs):
@@ -31,11 +34,22 @@ class Display(object):
         text_file = open(name + ".html", "w")
         text_file.write(html_str)
         text_file.close()
-        url = "http://localhost:8888/files/KqlMagic/notebooks/" + name + ".html"
+#        url = "http://localhost:8888/files/KqlMagic/notebooks/" + name + ".html"
+        url = Display._getServerUrl(name)
+        print(url)
         s  = '<script type="text/Javascript">'
         s += 'var win = window.open("' + url + '", "' + name + '", "fullscreen=yes, toolbar=no, location=no, directories=no, status=no, menubar=no, scrollbars=yes, resizable=yes");'
         s += '</script>'
         return Display.toHtml(body = s)
+
+    @staticmethod
+    def _getServerUrl(name):
+        # display(Javascript("""IPython.notebook.kernel.execute("NOTEBOOK_URL = '" + window.location + "'")"""))
+        # print('NOTEBOOK_URL = {0}'.format(Display.notebook_url))
+        parts =Display.notebook_url.split('/')
+        parts.pop()
+        parts.append(name)
+        return '/'.join(parts) +  ".html"
 
     @staticmethod
     def toHtml(**kwargs):

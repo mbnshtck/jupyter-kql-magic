@@ -1,4 +1,4 @@
-"""Setup for KqlMagic"""
+"""Setup for kqlmagic"""
 
 DESCRIPTION         = "kqlmagic: KQL (Kusto Query Language) execution via Jupyter magic"
 
@@ -75,6 +75,8 @@ setup(name=NAME,
     license=LICENSE,
     packages=find_packages('src'),
     package_dir = {'': 'src'},
+    packages=find_packages('src'),
+#    package_dir = {'': 'src'},
     include_package_data=True,
     zip_safe=False,
     install_requires=INSTALL_REQUIRES,
