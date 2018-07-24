@@ -1,0 +1,86 @@
+<html>
+        <head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+        </head>
+        <body>
+<link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css" rel="stylesheet" type="text/css">
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js" type="text/javascript"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js" type="text/javascript"></script>
+<style>
+.just-padding {
+  height: 100%;
+  width: 100%;
+  padding: 15px;
+}
+
+.list-group.list-group-root {
+  padding: 0;
+  overflow: hidden;
+}
+
+.list-group.list-group-root .list-group {
+  margin-bottom: 0;
+}
+
+.list-group.list-group-root .list-group-item {
+  border-radius: 0;
+  border-width: 1px 0 0 0;
+}
+
+.list-group.list-group-root > .list-group-item:first-child {
+  border-top-width: 0;
+}
+
+.list-group.list-group-root > .list-group > .list-group-item {
+  padding-left: 30px;
+}
+
+.list-group.list-group-root > .list-group > .list-group > .list-group-item {
+  padding-left: 45px;
+}        
+</style>
+        <script type="text/javascript">
+            var w = window.innerWidth;
+            var h = window.innerHeight;            
+            window.resizeTo(w/3, h);
+            myWindow.focus(); 
+        </script>
+<script type="text/javascript">
+
+
+    window.onload=function(){
+      
+$(function() {
+
+  $('.list-group-item').on('click', function() {
+    $('.glyphicon', this)
+      .toggleClass('glyphicon-chevron-right')
+      .toggleClass('glyphicon-chevron-down');
+  });
+
+});
+
+
+    }
+</script>
+
+<div class="just-padding" height='100%'   width='50%'>
+
+<div class="list-group list-group-root well"><a href='#StormEvents' class="list-group-item" data-toggle="collapse">
+                     <i class="glyphicon glyphicon-chevron-right"></i>StormEvents
+                  </a>
+                  <div class="list-group collapse" id='StormEvents'><a href="#" class="list-group-item">StartTime : System.DateTime</a><a href="#" class="list-group-item">EndTime : System.DateTime</a><a href="#" class="list-group-item">EpisodeId : System.Int32</a><a href="#" class="list-group-item">EventId : System.Int32</a><a href="#" class="list-group-item">State : System.String</a><a href="#" class="list-group-item">EventType : System.String</a><a href="#" class="list-group-item">InjuriesDirect : System.Int32</a><a href="#" class="list-group-item">InjuriesIndirect : System.Int32</a><a href="#" class="list-group-item">DeathsDirect : System.Int32</a><a href="#" class="list-group-item">DeathsIndirect : System.Int32</a><a href="#" class="list-group-item">DamageProperty : System.Int32</a><a href="#" class="list-group-item">DamageCrops : System.Int32</a><a href="#" class="list-group-item">Source : System.String</a><a href="#" class="list-group-item">BeginLocation : System.String</a><a href="#" class="list-group-item">EndLocation : System.String</a><a href="#" class="list-group-item">BeginLat : System.Double</a><a href="#" class="list-group-item">BeginLon : System.Double</a><a href="#" class="list-group-item">EndLat : System.Double</a><a href="#" class="list-group-item">EndLon : System.Double</a><a href="#" class="list-group-item">EpisodeNarrative : System.String</a><a href="#" class="list-group-item">EventNarrative : System.String</a><a href="#" class="list-group-item">StormSummary : System.Object</a></div><a href='#tsa_example_data' class="list-group-item" data-toggle="collapse">
+                     <i class="glyphicon glyphicon-chevron-right"></i>tsa_example_data
+                  </a>
+                  <div class="list-group collapse" id='tsa_example_data'><a href="#" class="list-group-item">TIMESTAMP : System.DateTime</a><a href="#" class="list-group-item">AppName : System.String</a><a href="#" class="list-group-item">Operation : System.String</a><a href="#" class="list-group-item">DurAvg : System.Double</a><a href="#" class="list-group-item">Rcount : System.Double</a></div><a href='#PageViewsSample' class="list-group-item" data-toggle="collapse">
+                     <i class="glyphicon glyphicon-chevron-right"></i>PageViewsSample
+                  </a>
+                  <div class="list-group collapse" id='PageViewsSample'><a href="#" class="list-group-item">Timestamp : System.DateTime</a><a href="#" class="list-group-item">Language : System.String</a><a href="#" class="list-group-item">Page : System.String</a><a href="#" class="list-group-item">Views : System.Int64</a><a href="#" class="list-group-item">BytesDelivered : System.Int64</a></div><a href='#PageViews' class="list-group-item" data-toggle="collapse">
+                     <i class="glyphicon glyphicon-chevron-right"></i>PageViews
+                  </a>
+                  <div class="list-group collapse" id='PageViews'><a href="#" class="list-group-item">Timestamp : System.DateTime</a><a href="#" class="list-group-item">Language : System.String</a><a href="#" class="list-group-item">Page : System.String</a><a href="#" class="list-group-item">Views : System.Int64</a><a href="#" class="list-group-item">BytesDelivered : System.Int64</a></div><a href='#ForecastExample' class="list-group-item" data-toggle="collapse">
+                     <i class="glyphicon glyphicon-chevron-right"></i>ForecastExample
+                  </a>
+                  <div class="list-group collapse" id='ForecastExample'><a href="#" class="list-group-item">Timestamp : System.DateTime</a><a href="#" class="list-group-item">RequestCount : System.Int64</a></div></div></div></body></html>

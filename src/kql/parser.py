@@ -165,6 +165,9 @@ class Parser(object):
 
                   'vc': {"abbreviation" : "validate_connection_string"},
                   'validate_connection_string': {"flag" : "validate_connection_string", "type" : "bool", "init" : "True", "config" : "config.validate_connection_string"},
+
+                  '?': {"abbreviation" : "schema"},
+                  'schema': {"flag" : "schema", "type" : "bool", "init" : "False"},
                   }
 
         for value in flags_options.values():

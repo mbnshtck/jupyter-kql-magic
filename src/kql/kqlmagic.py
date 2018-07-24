@@ -27,12 +27,196 @@ from kql.parser import Parser
 
 from kql.log  import Logger, logger, set_logger, create_log_context, set_logging_options
 from kql.display  import Display
+from kql.database_html  import Database_html
 
 @magics_class
 class kqlmagic(Magics, Configurable):
     """Runs KQL statement on Kusto, specified by a connect string.
 
     Provides the %%kql magic."""
+
+    html_schema = """<html>
+        <head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+        </head>
+        <body>
+<link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css" rel="stylesheet" type="text/css">
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js" type="text/javascript"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js" type="text/javascript"></script>
+<style>
+.just-padding {
+  height: 100%;
+  width: 100%;
+  padding: 15px;
+}
+
+.list-group.list-group-root {
+  padding: 0;
+  overflow: hidden;
+}
+
+.list-group.list-group-root .list-group {
+  margin-bottom: 0;
+}
+
+.list-group.list-group-root .list-group-item {
+  border-radius: 0;
+  border-width: 1px 0 0 0;
+}
+
+.list-group.list-group-root > .list-group-item:first-child {
+  border-top-width: 0;
+}
+
+.list-group.list-group-root > .list-group > .list-group-item {
+  padding-left: 30px;
+}
+
+.list-group.list-group-root > .list-group > .list-group > .list-group-item {
+  padding-left: 45px;
+}        
+</style>
+        <script type="text/javascript">
+            var w = window.innerWidth;
+            var h = window.innerHeight;            
+            window.resizeTo(w/3, h);
+            myWindow.focus(); 
+        </script>
+<script type="text/javascript">
+
+
+    window.onload=function(){
+      
+$(function() {
+
+  $('.list-group-item').on('click', function() {
+    $('.glyphicon', this)
+      .toggleClass('glyphicon-chevron-right')
+      .toggleClass('glyphicon-chevron-down');
+  });
+
+});
+
+
+    }
+</script>
+
+<div class="just-padding" height='100%'   width='50%'>
+
+<div class="list-group list-group-root well">
+  
+  <a href="#item-1" class="list-group-item" data-toggle="collapse">
+    <i class="glyphicon glyphicon-chevron-right"></i>Item 1
+  </a>
+  <div class="list-group collapse" id="item-1">
+    
+    <a href="#item-1-1" class="list-group-item" data-toggle="collapse">
+      <i class="glyphicon glyphicon-chevron-right"></i>Item 1.1
+    </a>
+    <div class="list-group collapse" id="item-1-1">
+      <a href="#" class="list-group-item">Item 1.1.1</a>
+      <a href="#" class="list-group-item">Item 1.1.2</a>
+      <a href="#" class="list-group-item">Item 1.1.3</a>
+    </div>
+    
+    <a href="#item-1-2" class="list-group-item" data-toggle="collapse">
+      <i class="glyphicon glyphicon-chevron-right"></i>Item 1.2
+    </a>
+    <div class="list-group collapse" id="item-1-2">
+      <a href="#" class="list-group-item">Item 1.2.1</a>
+      <a href="#" class="list-group-item">Item 1.2.2</a>
+      <a href="#" class="list-group-item">Item 1.2.3</a>
+    </div>
+    
+    <a href="#item-1-3" class="list-group-item" data-toggle="collapse">
+      <i class="glyphicon glyphicon-chevron-right"></i>Item 1.3
+    </a>
+    <div class="list-group collapse" id="item-1-3">
+      <a href="#" class="list-group-item">Item 1.3.1</a>
+      <a href="#" class="list-group-item">Item 1.3.2</a>
+      <a href="#" class="list-group-item">Item 1.3.3</a>
+    </div>
+    
+  </div>
+  
+  <a href="#item-2" class="list-group-item" data-toggle="collapse">
+    <i class="glyphicon glyphicon-chevron-right"></i>Item 2
+  </a>
+  <div class="list-group collapse" id="item-2">
+    
+    <a href="#item-2-1" class="list-group-item" data-toggle="collapse">
+      <i class="glyphicon glyphicon-chevron-right"></i>Item 2.1
+    </a>
+    <div class="list-group collapse" id="item-2-1">
+      <a href="#" class="list-group-item">Item 2.1.1</a>
+      <a href="#" class="list-group-item">Item 2.1.2</a>
+      <a href="#" class="list-group-item">Item 2.1.3</a>
+    </div>
+    
+    <a href="#item-2-2" class="list-group-item" data-toggle="collapse">
+      <i class="glyphicon glyphicon-chevron-right"></i>Item 2.2
+    </a>
+    <div class="list-group collapse" id="item-2-2">
+      <a href="#" class="list-group-item">Item 2.2.1</a>
+      <a href="#" class="list-group-item">Item 2.2.2</a>
+      <a href="#" class="list-group-item">Item 2.2.3</a>
+    </div>
+    
+    <a href="#item-2-3" class="list-group-item" data-toggle="collapse">
+      <i class="glyphicon glyphicon-chevron-right"></i>Item 2.3
+    </a>
+    <div class="list-group collapse" id="item-2-3">
+      <a href="#" class="list-group-item">Item 2.3.1</a>
+      <a href="#" class="list-group-item">Item 2.3.2</a>
+      <a href="#" class="list-group-item">Item 2.3.3</a>
+    </div>
+    
+  </div>
+  
+  
+  <a href="#item-3" class="list-group-item" data-toggle="collapse">
+    <i class="glyphicon glyphicon-chevron-right"></i>Item 3
+  </a>
+  <div class="list-group collapse" id="item-3">
+    
+    <a href="#item-3-1" class="list-group-item" data-toggle="collapse">
+      <i class="glyphicon glyphicon-chevron-right"></i>Item 3.1
+    </a>
+    <div class="list-group collapse" id="item-3-1">
+      <a href="#" class="list-group-item">Item 3.1.1</a>
+      <a href="#" class="list-group-item">Item 3.1.2</a>
+      <a href="#" class="list-group-item">Item 3.1.3</a>
+    </div>
+    
+    <a href="#item-3-2" class="list-group-item" data-toggle="collapse">
+      <i class="glyphicon glyphicon-chevron-right"></i>Item 3.2
+    </a>
+    <div class="list-group collapse" id="item-3-2">
+      <a href="#" class="list-group-item">Item 3.2.1</a>
+      <a href="#" class="list-group-item">Item 3.2.2</a>
+      <a href="#" class="list-group-item">Item 3.2.3</a>
+    </div>
+    
+    <a href="#item-3-3" class="list-group-item" data-toggle="collapse">
+      <i class="glyphicon glyphicon-chevron-right"></i>Item 3.3
+    </a>
+    <div class="list-group collapse" id="item-3-3">
+      <a href="#" class="list-group-item">Item 3.3.1</a>
+      <a href="#" class="list-group-item">Item 3.3.2</a>
+      <a href="#" class="list-group-item">Item 3.3.3</a>
+    </div>
+    
+  </div>
+  
+</div>
+  
+</div>
+
+</body>
+        </html>"""
+
 
     autolimit = Int(0, config=True, allow_none=True, help="Automatically limit the size of the returned result sets. Abbreviation: al")
     prettytable_style = Enum(['DEFAULT', 'MSWORD_FRIENDLY', 'PLAIN_COLUMNS', 'RANDOM'], 'DEFAULT', config=True, help="Set the table printing style to any of prettytable's defined styles. Abbreviation: ptst")
@@ -196,7 +380,7 @@ class kqlmagic(Magics, Configurable):
         if Display.notebook_url is None:
             # display(Javascript("""IPython.notebook.kernel.execute("NOTEBOOK_URL = '" + window.location + "'")"""))
             Display.notebook_url = user_ns.get("NOTEBOOK_URL")
-            print('NOTEBOOK_URL = {0} '.format(Display.notebook_url))
+            # print('NOTEBOOK_URL = {0} '.format(Display.notebook_url))
 
         query = parsed['kql'].strip()
         flags = parsed['flags']
@@ -222,15 +406,24 @@ class kqlmagic(Magics, Configurable):
                 #
                 if not connection_string and Connection.connections and flags.get('show_conn_list', self.show_conn_list) and not suppress_results:
                     Display.showInfoMessage(Connection.connection_list_formatted())
-                    return None
-                # validate connection
-                if flags.get('validate_connection_string', self.validate_connection_string):
-                    query = 'range c from 1 to 100 step 1 | count'
+                else:
+                    # validate connection
+                    if flags.get('validate_connection_string', self.validate_connection_string):
+                        query = 'range c from 1 to 100 step 1 | count'
+                        kql_proxy = KqlProxy(conn)
+                        raw_table = kql_proxy.execute(query)
+                    if not suppress_results:
+                        Display.showInfoMessage(Connection.connection_list_formatted())
+
+                if flags.get('schema'):
+                    query = '.show schema'
                     kql_proxy = KqlProxy(conn)
                     raw_table = kql_proxy.execute(query)
-                if not suppress_results:
-                    Display.showInfoMessage(Connection.connection_list_formatted())
-                    return None
+                    database_name = conn.get_database()
+                    html = Database_html.convert_database_metadata_to_html(raw_table.fetchall(), database_name, conn.name)
+                    name = database_name + '_database_metadata'
+                    Display.show(html, **{'fullscreen' : True, 'name': name})
+                return None
             #
             # submit query
             #

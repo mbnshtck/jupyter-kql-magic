@@ -46,6 +46,7 @@
     <Compile Include="src\kql\results.py" />
     <Compile Include="src\kql\kql_proxy.py" />
     <Compile Include="src\kql\kusto_engine.py" />
+    <Compile Include="src\kql\database_html.py" />
     <Compile Include="src\kql\version.py" />
     <Compile Include="src\kql\__init__.py" />
     <Compile Include="src\tests\test_column_guesser.py" />

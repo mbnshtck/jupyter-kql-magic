@@ -22,8 +22,10 @@ class Display(object):
         if len(html_str) > 0:
             if kwargs is not None and kwargs.get('fullscreen', False):
                 html_str = Display._getHtmlFS(html_str, **kwargs)
-            # print(HTML(html_str)._repr_html_())
-            display(HTML(html_str))
+                display(Javascript(html_str))
+            else:
+                # print(HTML(html_str)._repr_html_())
+                display(HTML(html_str))
 
     @staticmethod
     def _getHtmlFS(html_str, **kwargs):
@@ -34,13 +36,15 @@ class Display(object):
         text_file = open(name + ".html", "w")
         text_file.write(html_str)
         text_file.close()
-#        url = "http://localhost:8888/files/KqlMagic/notebooks/" + name + ".html"
         url = Display._getServerUrl(name)
-        print(url)
-        s  = '<script type="text/Javascript">'
-        s += 'var win = window.open("' + url + '", "' + name + '", "fullscreen=yes, toolbar=no, location=no, directories=no, status=no, menubar=no, scrollbars=yes, resizable=yes");'
-        s += '</script>'
-        return Display.toHtml(body = s)
+        # url = "https://www.w3schools.com"
+        # print(url)
+        # s = window.open("' + url + '", "' + name + '", "fullscreen=no, toolbar=no, location=no, directories=no, status=no, menubar=no, scrollbars=yes, resizable=yes,width=300,height=300");'
+        return  'window.open("' + url + '", "' + name + '", "fullscreen=no,directories=no,location=no,menubar=no,resizable=yes,scrollbars=yes,status=no,titlebar=no,toolbar=no");'
+        # s  = '<script type="text/Javascript">'
+        # s += 'var win = window.open("' + url + '", "' + name + '", "toolbar=yes,scrollbars=yes,resizable=yes,top=500,left=500,width=400,height=400");'
+        # s += '</script>'
+        # return Display.toHtml(body = s)
 
     @staticmethod
     def _getServerUrl(name):
