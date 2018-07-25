@@ -52,8 +52,10 @@ class Database_html(object):
                 <script type="text/javascript">
                     var w = window.innerWidth;
                     var h = window.innerHeight;            
-                    window.resizeTo(w/2, h);
-                    myWindow.focus(); 
+                    var w = screen.width;
+                    var h = screen.height;            
+                    window.resizeTo(w/4, h);
+                    window.focus(); 
                 </script>
         <script type="text/javascript">
             window.onload=function(){
@@ -73,7 +75,7 @@ class Database_html(object):
     """
     database_metadata_html = """<html><head>
         <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="viewport" content="width=device-width,initial-scale=1">
         <title>{0}</title>
 
         </head><body>
@@ -84,7 +86,7 @@ class Database_html(object):
 
         <h1 align="center">{3}</h1>
 
-        <div class="just-padding" height='100%' width='50%'>
+        <div class="just-padding">
 
         <div class="list-group list-group-root well">
         {4}
@@ -97,12 +99,11 @@ class Database_html(object):
         for table in database_metadata_tree.keys():
             table_metadata_tree = database_metadata_tree.get(table)
             item += Database_html._convert_table_metadata_tree_to_item(table, table_metadata_tree, **kwargs)
-        #print(item)
-        #result =  Database_html.database_metadata_html1 +item+ Database_html.database_metadata_html2
-        title = connectionName
+        header = connectionName
+        title = connectionName.replace('@', '_at_') + ' schema'
         result =  Database_html.database_metadata_html.format(title, Database_html.database_metadata_scripts, Database_html.database_metadata_css,
-        # print(result)
-                                                              title, item)
+                                                              header, item)
+        #print(result)
         return result
 
     @staticmethod

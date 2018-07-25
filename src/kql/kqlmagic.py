@@ -421,7 +421,8 @@ $(function() {
                     raw_table = kql_proxy.execute(query)
                     database_name = conn.get_database()
                     html = Database_html.convert_database_metadata_to_html(raw_table.fetchall(), database_name, conn.name)
-                    name = database_name + '_database_metadata'
+                    name = conn.name.replace('@','_at_') + '_schema'
+                    # name = database_name + '_database_metadata'
                     Display.show(html, **{'fullscreen' : True, 'name': name})
                 return None
             #
