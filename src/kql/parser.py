@@ -164,10 +164,10 @@ class Parser(object):
                   'dsn_filename': {"flag" : "dsn_filename", "type" : "str", "config" : "config.dsn_filename"},
 
                   'vc': {"abbreviation" : "validate_connection_string"},
-                  'validate_connection_string': {"flag" : "validate_connection_string", "type" : "bool", "init" : "True", "config" : "config.validate_connection_string"},
+                  'validate_connection_string': {"flag" : "validate_connection_string", "type" : "bool", "config" : "config.validate_connection_string"},
 
-                  '?': {"abbreviation" : "schema"},
-                  'schema': {"flag" : "schema", "type" : "bool", "init" : "False"},
+                  'ss': {"abbreviation" : "show_schema"},
+                  'show_schema': {"flag" : "show_schema", "type" : "bool", "config" : "config.show_schema"},
                   }
 
         for value in flags_options.values():
