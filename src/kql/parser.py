@@ -139,8 +139,8 @@ class Parser(object):
                   'pfi': {"abbreviation" : "plotly_fs_includejs"},
                   'plotly_fs_includejs': {"flag" : "plotly_fs_includejs", "type" : "bool", "config" : "config.plotly_fs_includejs"},
 
-                  'fs': {"abbreviation" : "fullscreen"},
-                  'fullscreen': {"flag" : "fullscreen", "type" : "bool", "init" : "False"},
+                  'win': {"abbreviation" : "window"},
+                  'window': {"flag" : "window", "type" : "bool", "init" : "False"},
 
                   'al': {"abbreviation" : "autolimit"},
                   'autolimit': {"flag" : "autolimit", "type" : "int", "config" : "config.autolimit"},
@@ -168,6 +168,9 @@ class Parser(object):
 
                   'ss': {"abbreviation" : "show_schema"},
                   'show_schema': {"flag" : "show_schema", "type" : "bool", "config" : "config.show_schema"},
+
+                  'h': {"abbreviation" : "help"},
+                  'help': {"flag" : "help", "type" : "bool", "init" : "False"},
                   }
 
         for value in flags_options.values():

@@ -218,9 +218,9 @@ class ResultSet(list, ColumnGuesserMixin):
         Display.show(html, **flags)
         return None
 
-    def TableFS(self, **kwargs):
+    def TableInWindow(self, **kwargs):
         "display the table"
-        return self.Table(**{"fullscreen" : True, **kwargs})
+        return self.Table(**{"window" : True, **kwargs})
 
     # Printable pretty presentation of the object
     def __str__(self, *args, **kwargs):
@@ -283,20 +283,20 @@ class ResultSet(list, ColumnGuesserMixin):
     def Chart(self, **kwargs):
         "display the chart that was specified in the query"
         flags = {**self.flags, **kwargs}
-        fs = flags is not None and flags.get('fullscreen')
-        c = self._getChartHtml(fs)
+        window_mode = flags is not None and flags.get('window')
+        c = self._getChartHtml(window_mode)
         html = Display.toHtml(**c)
         Display.show(html, **flags)
         return None
 
-    def ChartFS(self, **kwargs):
+    def ChartInWindow(self, **kwargs):
         "display the chart that was specified in the query"
-        return self.Chart(**{"fullscreen" : True, **kwargs})
+        return self.Chart(**{"window" : True, **kwargs})
 
     def is_chart(self):
         return self.visualization and not self.visualization == 'table'
 
-    def _getChartHtml(self, fullscreen = False):
+    def _getChartHtml(self, window_mode = False):
         "get query result in a char format as an HTML string"
         # https://kusto.azurewebsites.net/docs/queryLanguage/query_language_renderoperator.html
 
@@ -349,8 +349,8 @@ class ResultSet(list, ColumnGuesserMixin):
             figure_or_data = self.render_scatterchart_plotly(" ", self.title)
 
         if figure_or_data is not None:
-            head = '<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>' if fullscreen and not self.flags.get("plotly_fs_includejs", False) else ""
-            body = plotly.offline.plot(figure_or_data, include_plotlyjs=fullscreen and self.flags.get("plotly_fs_includejs", False), output_type='div')
+            head = '<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>' if window_mode and not self.flags.get("plotly_fs_includejs", False) else ""
+            body = plotly.offline.plot(figure_or_data, include_plotlyjs= window_mode and self.flags.get("plotly_fs_includejs", False), output_type='div')
             return {"body" : body, "head" : head}
         return {}
 
@@ -826,7 +826,7 @@ class ResultSet(list, ColumnGuesserMixin):
         ylabel = ", ".join([c.name for c in ys])
         xlabel = xticks.name
         domains = [dict(x = [0, 1], y = [0, 1])] if pies == 1 else [dict(x = [0 + .52 *(i % 2), 1 - .52*(1 - i % 2)], y = [(i // 2) * ydelta, ((i // 2 + 1) - 0.05) * ydelta ]) for i in range(0, pies)]
-        data = [go.Pie(labels=xticks, values=yticks, domain=domains[idx], marker=dict(colors=colors_pallete), name=yticks.name, textinfo = yticks.name) for idx, yticks in enumerate(ys)]
+        data = [go.Pie(labels=xticks, values=yticks, domain=domains[idx], marker=dict(colors=colors_pallete), name=yticks.name, textinfo='label+percent') for idx, yticks in enumerate(ys)]
         layout = go.Layout(
             title = title or "piechart",
             showlegend=True

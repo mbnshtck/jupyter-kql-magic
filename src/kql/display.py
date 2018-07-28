@@ -20,37 +20,104 @@ class Display(object):
     @staticmethod
     def show(html_str, **kwargs):
         if len(html_str) > 0:
-            if kwargs is not None and kwargs.get('fullscreen', False):
-                html_str = Display._getHtmlFS(html_str, **kwargs)
-                display(Javascript(html_str))
+            if kwargs is not None and kwargs.get('window', False):
+                file_name = Display._get_name(**kwargs)
+                url = Display._html_to_url(html_str, file_name, **kwargs)
+                Display.show_windows({file_name : url}, **kwargs)
             else:
                 # print(HTML(html_str)._repr_html_())
                 display(HTML(html_str))
 
     @staticmethod
-    def _getHtmlFS(html_str, **kwargs):
+    def show_windows(windows, **kwargs):
+        # script = Display._get_window_script(url, name, **kwargs)
+        # display(Javascript(script))
+        html_str = Display._get_window_html(windows, **kwargs)
+        display(HTML(html_str))
+
+    @staticmethod
+    def _html_to_url(html_str, file_name, **kwargs):
+        text_file = open(file_name + ".html", "w")
+        text_file.write(html_str)
+        text_file.close()
+        return Display._getServerUrl(file_name)
+
+    @staticmethod
+    def _get_name(**kwargs):
         if kwargs is not None and isinstance(kwargs.get('name'), str) and len(kwargs.get('name')) > 0:
             name = kwargs.get('name')
         else:
             name = uuid.uuid4().hex
-        text_file = open(name + ".html", "w")
-        text_file.write(html_str)
-        text_file.close()
-        url = Display._getServerUrl(name)
-        # url = "https://www.w3schools.com"
+        return name
+
+    @staticmethod
+    def _get_window_script(url, window_name, **kwargs):
         # print(url)
         # s = window.open("' + url + '", "' + name + '", "fullscreen=no, toolbar=no, location=no, directories=no, status=no, menubar=no, scrollbars=yes, resizable=yes,width=300,height=300");'
-        return  'window.open("' + url + '", "' + name + '", "fullscreen=no,directories=no,location=no,menubar=no,resizable=yes,scrollbars=yes,status=no,titlebar=no,toolbar=no");'
+        # return  'window.open("' + url + '", "' + window_name + '", "fullscreen=no,directories=no,location=no,menubar=no,resizable=yes,scrollbars=yes,status=no,titlebar=no,toolbar=no,width=500");'
+
+        script = 'var win = window.open("", "' + window_name + '", "fullscreen=yes,directories=no,location=no,menubar=no,resizable=yes,scrollbars=yes,status=no,titlebar=no,toolbar=no,width=500");'
+        script += 'win.location ="' +url+'" ;win.focus();'
+        # script = 'var win = window.open("' + url + '", "' + window_name + '", "fullscreen=yes,directories=no,location=no,menubar=no,resizable=yes,scrollbars=yes,status=no,titlebar=no,toolbar=no,width=500");'
+        # script += 'var w = screen.width; var h = screen.height; win.resizeTo(w/4, h); win.moveTo(50, 50);win.location ="' +url+'" ;win.focus();'
+        return script
         # s  = '<script type="text/Javascript">'
         # s += 'var win = window.open("' + url + '", "' + name + '", "toolbar=yes,scrollbars=yes,resizable=yes,top=500,left=500,width=400,height=400");'
         # s += '</script>'
-        # return Display.toHtml(body = s)
+
+    @staticmethod
+    def _get_window_html(windows, **kwargs):
+        html_part1 = """<!DOCTYPE html>
+            <html>
+            <body>
+
+            <button onclick="this.style.visibility='hidden';myFunction()">Click to open window</button>
+
+            <script>
+            function myFunction() {"""
+            #var myWindow = window.open('""" +url+ """', '""" +window_name+ """', "width=200,height=100");
+            #  // myWindow.document.write("<p>This window's name is: " + myWindow.name + "</p>");
+        html_part3 = """
+            }
+            </script>
+
+            </body>
+            </html>"""
+        html_part2 = ''
+        for window_name in windows.keys():
+            url = windows.get(window_name)
+            html_part2 += window_name+ """ = window.open('""" +url+ """', '""" +window_name+ """', 'width=200,height=100');"""
+        result =  html_part1 + html_part2 + html_part3
+        # print(result)
+        return result
+
+    @staticmethod
+    def _get_window_html_obsolete(url, window_name, **kwargs):
+        html = """<!DOCTYPE html>
+            <html>
+            <body>
+
+            <p>Click the button to create a window and then display the name of the new window.</p>
+
+            <button onclick="myFunction()">Click to open window """ +window_name+ """</button>
+
+            <script>
+            function myFunction() {
+                var myWindow = window.open('""" +url+ """', '""" +window_name+ """', "width=200,height=100");
+                // myWindow.document.write("<p>This window's name is: " + myWindow.name + "</p>");
+            }
+            </script>
+
+            </body>
+            </html>"""
+        return html
+
 
     @staticmethod
     def _getServerUrl(name):
         # display(Javascript("""IPython.notebook.kernel.execute("NOTEBOOK_URL = '" + window.location + "'")"""))
         # print('NOTEBOOK_URL = {0}'.format(Display.notebook_url))
-        parts =Display.notebook_url.split('/')
+        parts = Display.notebook_url.split('/')
         parts.pop()
         parts.append(name)
         return '/'.join(parts) +  ".html"

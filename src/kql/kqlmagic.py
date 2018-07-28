@@ -53,7 +53,7 @@ class kqlmagic(Magics, Configurable):
     last_raw_result_var = Unicode('_kql_raw_result_', config=True, help="Set the name of the variable that will contain last raw result. Abbreviation: var")
     enable_suppress_result = Bool(True, config=True, help="Suppress result when magic ends with a semicolon ;. Abbreviation: esr")
     show_query_time = Bool(True, config=True, help="Print query execution elapsed time. Abbreviation: sqt")
-    plotly_fs_includejs = Bool(False, config=True, help="Include plotly javascript code to fullscreen HTMLs, if set to  False (default), it download from https://cdn.plot.ly/plotly-latest.min.js. Abbreviation: pfi")
+    plotly_fs_includejs = Bool(False, config=True, help="Include plotly javascript code when for window display mode, if set to False (default), it download from https://cdn.plot.ly/plotly-latest.min.js. Abbreviation: pfi")
 
     validate_connection_string = Bool(True, config=True, help="Validate connectionString with an implicit query, when query statement is missing. Abbreviation: vc")
     version = Enum([VERSION], VERSION, config=True, help="kqlmagic version")
@@ -220,6 +220,17 @@ class kqlmagic(Magics, Configurable):
 
         try:
             if not query:
+                windows = {}
+                if flags.get('help'):
+                    help_url = 'http://aka.ms/kdocs'
+                    # 'https://docs.loganalytics.io/docs/Language-Reference/Tabular-operators'
+                    # 'http://aka.ms/kdocs'
+                    # 'https://kusdoc2.azurewebsites.net/docs/queryLanguage/query-essentials/readme.html'
+                    # import requests
+                    # f = requests.get(help_url)
+                    # html = f.text.replace('width=device-width','width=500')
+                    # Display.show(html, **{'window' : True, 'name': 'KustoQueryLanguage'})
+                    windows['KustoQueryLanguage'] = help_url
                 #
                 # If NO  kql query, just return the current connection
                 #
@@ -239,10 +250,15 @@ class kqlmagic(Magics, Configurable):
                     kql_proxy = KqlProxy(conn)
                     raw_table = kql_proxy.execute(query)
                     database_name = conn.get_database()
-                    html = Database_html.convert_database_metadata_to_html(raw_table.fetchall(), database_name, conn.name)
+                    html_str = Database_html.convert_database_metadata_to_html(raw_table.fetchall(), database_name, conn.name)
                     name = conn.name.replace('@','_at_') + '_schema'
                     # name = database_name + '_database_metadata'
-                    Display.show(html, **{'fullscreen' : True, 'name': name})
+                    url = Display._html_to_url(html_str, name)
+                    windows[name] = url
+
+                if len(windows) > 0:
+                    Display.show_windows(windows)
+
                 return None
             #
             # submit query
@@ -385,6 +401,7 @@ def load_ipython_extension(ip):
     override_default_configuration(ip, kql_magic_load_mode)
     set_default_connections(ip, kql_magic_load_mode)
     display(Javascript("""IPython.notebook.kernel.execute("NOTEBOOK_URL = '" + window.location + "'")"""))
+    time.sleep(5)
     return result
 
 def unload_ipython_extension(ip):

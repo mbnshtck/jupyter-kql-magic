@@ -43,15 +43,28 @@ class _MyAadHelper(object):
             code = self.adal_context.acquire_user_code(self.kusto_cluster, self.client_id)
 
             Display.showInfoMessage(code['message'])
-            getpass.getpass(prompt = 'CTRL+C this code: {0}, then press enter to switch to authentication page'.format(code["user_code"]))
 
+            window_name = code["user_code"]
             url = code['verification_url']
-            s  = '<script type="text/Javascript">'
-            s += 'var win = window.open("' + url + '", "' + 'code' + '", "fullscreen=no, toolbar=no, location=no, directories=no, status=no, menubar=no, scrollbars=yes, resizable=no");'
-            s += '</script>'
-            html = Display.toHtml(body = s)
+            html_str = """<!DOCTYPE html>
+                <html>
+                <body>
 
-            Display.show(html)
+                <h1 id="user_code_p">Copy this code:    <b>""" +code["user_code"]+ """   </b></h1>
+
+                <button onclick="this.style.visibility='hidden';document.getElementById('user_code_p').innerHTML = '';myFunction()">Click to open authentication  window """ +window_name+ """</button>
+
+                <script>
+                function myFunction() {
+                    var myWindow = window.open('""" +url+ """', '""" +window_name+ """', "width=200,height=100");
+                    // myWindow.document.write("<p>This window's name is: " + myWindow.name + "</p>");
+                }
+                </script>
+
+                </body>
+                </html>"""
+
+            Display.show(html_str)
             # webbrowser.open(code['verification_url'])
             token_response = self.adal_context.acquire_token_with_device_code(self.kusto_cluster, code, self.client_id)
 
