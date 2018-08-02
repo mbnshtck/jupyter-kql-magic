@@ -58,6 +58,10 @@ class kqlmagic(Magics, Configurable):
     version = Enum([VERSION], VERSION, config=True, help="kqlmagic version")
     auto_show_schema = Bool(True, config=True, help="Show schema when connecting to a new database. Abbreviation: ass")
 
+    # constants
+    showfiles_folder_name = "temp_showfiles"
+
+
 
     # [KUSTO]
     # Driver          = Easysoft ODBC-SQL Server
@@ -194,7 +198,6 @@ class kqlmagic(Magics, Configurable):
 
 
     def execute_query(self, parsed, user_ns, result_set = None):
-        showfiles_folder_name = "temp_showfiles"
         if Display.showfiles_base_url is None:
             # display(Javascript("""IPython.notebook.kernel.execute("NOTEBOOK_URL = '" + window.location + "'")"""))
 
@@ -211,13 +214,7 @@ class kqlmagic(Magics, Configurable):
                     parts.pop()
                     Display.showfiles_base_url = '/'.join(parts) 
                     # assumes it is at root
-                Display.showfiles_base_url += "/" + showfiles_folder_name + "/"
-
-                root_path = os.getcwd()
-                showfiles_folder_Full_name = root_path + '/' + showfiles_folder_name
-                if not os.path.exists(showfiles_folder_Full_name):
-                    os.makedirs(showfiles_folder_Full_name)
-                Display.showfiles_base_path = showfiles_folder_Full_name + '/'
+                Display.showfiles_base_url += "/" + self.showfiles_folder_name + "/"
 
             # print('NOTEBOOK_URL = {0} '.format(notebook_url))
 
@@ -421,9 +418,32 @@ def load_ipython_extension(ip):
     result = ip.register_magics(kqlmagic)
     override_default_configuration(ip, kql_magic_load_mode)
     set_default_connections(ip, kql_magic_load_mode)
-    get_ipython().kernel._trait_values['help_links'].append({'text': 'kql Reference', 'url': 'http://aka.ms/kdocs'})
+
+    # add help link
+    help_links = get_ipython().kernel._trait_values['help_links']
+    found = False
+    for link in help_links:
+        if link.get('text') == 'kql Reference':
+            found = True
+            break
+    if not found:
+        help_links.append({'text': 'kql Reference', 'url': 'http://aka.ms/kdocs'})
+        # get_ipython().kernel._trait_values['help_links'].append({'text': 'kql Reference', 'url': 'http://aka.ms/kdocs'})
     display(Javascript("""IPython.notebook.kernel.reconnect();"""))
     time.sleep(1)
+
+    if not get_ipython().dir_stack:
+        root_path = os.getcwd()
+    else:
+        root_path = get_ipython().dir_stack[0]
+
+    showfiles_folder_Full_name = root_path + '/' + kqlmagic.showfiles_folder_name
+    if not os.path.exists(showfiles_folder_Full_name):
+        os.makedirs(showfiles_folder_Full_name)
+    Display.showfiles_base_path = showfiles_folder_Full_name + '/'
+    print(Display.showfiles_base_path)
+
+    # get notebook location
     display(Javascript("""IPython.notebook.kernel.execute("NOTEBOOK_URL = '" + window.location + "'");"""))
     time.sleep(5)
     return result

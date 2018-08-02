@@ -36,3 +36,9 @@ nosetests.xml
 
 # Pycharm
 /.idea
+
+#notebook checkpoints
+**/.ipynb_checkpoints
+
+#local dev folder
+**/local_dev_folder
