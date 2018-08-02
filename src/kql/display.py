@@ -15,7 +15,8 @@ class Display(object):
     danger_style = {'color': '#b94a48', 'background-color': '#f2dede', 'border-color': '#eed3d7' }
     info_style = {'color': '#3a87ad', 'background-color': '#d9edf7', 'border-color': '#bce9f1' }
     warning_style = {'color': '#8a6d3b', 'background-color': '#fcf8e3', 'border-color': '#faebcc' }
-    notebook_url = None
+    showfiles_base_url = None
+    showfiles_base_path = None
 
     @staticmethod
     def show(html_str, **kwargs):
@@ -41,10 +42,10 @@ class Display(object):
 
     @staticmethod
     def _html_to_url(html_str, file_name, **kwargs):
-        text_file = open(file_name + ".html", "w")
+        text_file = open(Display.showfiles_base_path +file_name+ ".html", "w")
         text_file.write(html_str)
         text_file.close()
-        return Display.notebook_url +file_name+ '.html' 
+        return Display.showfiles_base_url +file_name+ '.html' 
 
     @staticmethod
     def _get_name(**kwargs):

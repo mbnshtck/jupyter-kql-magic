@@ -194,8 +194,8 @@ class kqlmagic(Magics, Configurable):
 
 
     def execute_query(self, parsed, user_ns, result_set = None):
-
-        if Display.notebook_url is None:
+        showfiles_folder_name = "temp_showfiles"
+        if Display.showfiles_base_url is None:
             # display(Javascript("""IPython.notebook.kernel.execute("NOTEBOOK_URL = '" + window.location + "'")"""))
 
             notebook_url = user_ns.get("NOTEBOOK_URL")
@@ -205,11 +205,19 @@ class kqlmagic(Magics, Configurable):
                 if (end > 0):
                     start = notebook_url.find('//') + 2
                     library, user = notebook_url[start:end].split('-')
-                    Display.notebook_url = 'https://notebooks.azure.com/api/user/' +user+ '/library/' +library+ '/html/'
+                    Display.showfiles_base_url = 'https://notebooks.azure.com/api/user/' +user+ '/library/' +library+ '/html'
                 else:
                     parts = notebook_url.split('/')
                     parts.pop()
-                    Display.notebook_url = '/'.join(parts) +  "/"
+                    Display.showfiles_base_url = '/'.join(parts) 
+                    # assumes it is at root
+                Display.showfiles_base_url += "/" + showfiles_folder_name + "/"
+
+                root_path = os.getcwd()
+                showfiles_folder_Full_name = root_path + '/' + showfiles_folder_name
+                if not os.path.exists(showfiles_folder_Full_name):
+                    os.makedirs(showfiles_folder_Full_name)
+                Display.showfiles_base_path = showfiles_folder_Full_name + '/'
 
             # print('NOTEBOOK_URL = {0} '.format(notebook_url))
 
