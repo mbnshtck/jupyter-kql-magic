@@ -23,16 +23,20 @@ class Display(object):
             if kwargs is not None and kwargs.get('window', False):
                 file_name = Display._get_name(**kwargs)
                 url = Display._html_to_url(html_str, file_name, **kwargs)
-                Display.show_windows({file_name : url}, **kwargs)
+                Display.show_window(file_name, url, kwargs.get('botton_text'), **kwargs)
             else:
                 # print(HTML(html_str)._repr_html_())
                 display(HTML(html_str))
 
     @staticmethod
+    def show_window(window_name, url, button_text = None, **kwargs):
+        html_str = Display._get_window_html(window_name, url, button_text, **kwargs)
+        display(HTML(html_str))
+
+    @staticmethod
     def show_windows(windows, **kwargs):
-        # script = Display._get_window_script(url, name, **kwargs)
         # display(Javascript(script))
-        html_str = Display._get_window_html(windows, **kwargs)
+        html_str = Display._get_windows_html(windows, **kwargs)
         display(HTML(html_str))
 
     @staticmethod
@@ -51,32 +55,26 @@ class Display(object):
         return name
 
     @staticmethod
-    def _get_window_script(url, window_name, **kwargs):
-        # print(url)
-        # s = window.open("' + url + '", "' + name + '", "fullscreen=no, toolbar=no, location=no, directories=no, status=no, menubar=no, scrollbars=yes, resizable=yes,width=300,height=300");'
-        # return  'window.open("' + url + '", "' + window_name + '", "fullscreen=no,directories=no,location=no,menubar=no,resizable=yes,scrollbars=yes,status=no,titlebar=no,toolbar=no,width=500");'
+    def _get_windows_html(windows, **kwargs):
+        windowFunctionName = "kqlMagicLaunchWindowFunction"
+        if kwargs is not None and kwargs.get('windowFunctionName'):
+            windowFunctionName = kwargs.get('windowFunctionName')
 
-        script = 'var win = window.open("", "' + window_name + '", "fullscreen=yes,directories=no,location=no,menubar=no,resizable=yes,scrollbars=yes,status=no,titlebar=no,toolbar=no,width=500");'
-        script += 'win.location ="' +url+'" ;win.focus();'
-        # script = 'var win = window.open("' + url + '", "' + window_name + '", "fullscreen=yes,directories=no,location=no,menubar=no,resizable=yes,scrollbars=yes,status=no,titlebar=no,toolbar=no,width=500");'
-        # script += 'var w = screen.width; var h = screen.height; win.resizeTo(w/4, h); win.moveTo(50, 50);win.location ="' +url+'" ;win.focus();'
-        return script
-        # s  = '<script type="text/Javascript">'
-        # s += 'var win = window.open("' + url + '", "' + name + '", "toolbar=yes,scrollbars=yes,resizable=yes,top=500,left=500,width=400,height=400");'
-        # s += '</script>'
-
-    @staticmethod
-    def _get_window_html(windows, **kwargs):
         html_part1 = """<!DOCTYPE html>
             <html>
             <body>
 
-            <button onclick="this.style.visibility='hidden';myFunction()">Click to open window</button>
+            <button onclick="this.style.visibility='hidden';"""+windowFunctionName+"""Function()">Click to open window</button>
 
             <script>
-            function myFunction() {"""
-            #var myWindow = window.open('""" +url+ """', '""" +window_name+ """', "width=200,height=100");
-            #  // myWindow.document.write("<p>This window's name is: " + myWindow.name + "</p>");
+
+            function """+windowFunctionName+"""Function() {
+                IPython.notebook.kernel.execute("KQL_BUTTON_CLICKED = True");
+                var w = screen.width / 2;
+                var h = screen.height / 2;
+                params = 'width='+w+',height='+h;
+            """
+
         html_part3 = """
             }
             </script>
@@ -86,32 +84,34 @@ class Display(object):
         html_part2 = ''
         for window_name in windows.keys():
             url = windows.get(window_name)
-            html_part2 += window_name+ """ = window.open('""" +url+ """', '""" +window_name+ """', 'width=200,height=100');"""
+            window_params = "fullscreen=no,directories=no,location=no,menubar=no,resizable=yes,scrollbars=yes,status=no,titlebar=no,toolbar=no,"
+            html_part2 += 'kqlMagic_' +window_name+ """ = window.open('""" +url+ """', '""" +window_name+ """', '""" +window_params+ """'+params);"""
         result =  html_part1 + html_part2 + html_part3
         # print(result)
         return result
 
     @staticmethod
-    def _get_window_html_obsolete(url, window_name, **kwargs):
-        html = """<!DOCTYPE html>
-            <html>
-            <body>
+    def _get_window_html(window_name, url, button_text = None, **kwargs):
+        button_text = button_text or 'Click to open window'
+        window_params = "fullscreen=no,directories=no,location=no,menubar=no,resizable=yes,scrollbars=yes,status=no,titlebar=no,toolbar=no,"
+        html_str = """<!DOCTYPE html>
+            <html><body>
 
-            <p>Click the button to create a window and then display the name of the new window.</p>
-
-            <button onclick="myFunction()">Click to open window """ +window_name+ """</button>
+            <button onclick="this.style.visibility='hidden';kqlMagicLaunchWindowFunction('"""+url+"""')">""" +button_text+ """</button>
 
             <script>
-            function myFunction() {
-                var myWindow = window.open('""" +url+ """', '""" +window_name+ """', "width=200,height=100");
-                // myWindow.document.write("<p>This window's name is: " + myWindow.name + "</p>");
+            function kqlMagicLaunchWindowFunction(url) {
+                window.focus();
+                var w = screen.width / 2;
+                var h = screen.height / 2;
+                params = 'width='+w+',height='+h;
+                kqlMagic_""" +window_name+ """ = window.open(url, '""" +window_name+ """', '""" +window_params+ """'+params);
             }
             </script>
 
-            </body>
-            </html>"""
-        return html
-
+            </body></html>"""
+        # print(html_str)
+        return html_str
 
     @staticmethod
     def _getServerUrl(name):
@@ -144,8 +144,9 @@ class Display(object):
             msg_str = str(msg)
         if len(msg_str) > 0:
             # success_style
+            msg_str = msg_str.replace('"', '&quot;').replace("'", '&apos;').replace('\n', '<br>').replace(' ', '&nbsp')
             body =  "<div><p style='padding: 10px; color: {0}; background-color: {1}; border-color: {2}'>{3}</p></div>".format(
-                palette['color'], palette['background-color'], palette['border-color'], msg_str.replace('\n', '<br>').replace(' ', '&nbsp'))
+                palette['color'], palette['background-color'], palette['border-color'], msg_str)
         else:
            body = ""
         return {"body" : body}

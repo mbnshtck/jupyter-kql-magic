@@ -4,11 +4,12 @@ from azure.kusto.data import KustoClient
 import requests
 import getpass
 
+from kql.kql_engine import KqlEngine, KqlEngineError
 from kql.my_aad_helper import _MyAadHelper
 
 
 
-class KustoEngine(object):
+class KustoEngine(KqlEngine):
     schema = 'kusto://'
 
     @classmethod
@@ -30,29 +31,25 @@ class KustoEngine(object):
 
     # Object constructor
     def __init__(self, conn_str, current=None):
+        super().__init__()
         # self.client_id = self.client_id or 'e07cf1fb-c6a6-4668-b21a-f74731afa19a'
         self.cluster_url_template = 'https://{0}.kusto.windows.net'
-        self.name = None
-        self.bind_url = None
-        self.client = None
         self._parsed_conn = {}
-        self.parse_connection_str(conn_str, current)
+        self._parse_connection_str(conn_str, current)
+        self._set_client()
 
-
-    def __eq__(self, other):
-        return self.bind_url and self.bind_url == other.bind_url
 
     def _validate_connection_delimiter(self, require_delimiter, delimiter):
         # delimiter '.' should separate between tokens
         if require_delimiter:
             if delimiter != '.':
-                raise KustoEngineError('Invalid connection string, missing or wrong delimiter')
+                raise KqlEngineError('Invalid connection string, missing or wrong delimiter')
         # delimiter '.' should not exsit before first token
         else:
             if len(delimiter) > 0:
-                raise KustoEngineError('Invalid connection string.')
+                raise KqlEngineError('Invalid connection string.')
 
-    def parse_connection_str(self, conn_str : str, current):
+    def _parse_connection_str(self, conn_str : str, current):
         prefix_matched = False
         conn_str_rest = None
 
@@ -60,7 +57,7 @@ class KustoEngine(object):
         pattern = re.compile(r'^kusto://(?P<conn_str_rest>.*)$')
         match = pattern.search(conn_str.strip())
         if not match:
-            raise KustoEngineError('Invalid connection string, must be prefixed by "kusto://"')
+            raise KqlEngineError('Invalid connection string, must be prefixed by "kusto://"')
         conn_str_rest = match.group('conn_str_rest')
 
         # parse all tokens sequentially
@@ -75,28 +72,37 @@ class KustoEngine(object):
 
         # at least one token must be matched, and we should have nothing more to parse
         if not prefix_matched or len(conn_str_rest) > 0:
-            raise KustoEngineError('Invalid connection string.')
+            raise KqlEngineError('Invalid connection string.')
 
         # code cannot be followerd by clientsecret or username of password
         if self._parsed_conn.get('code') and (self._parsed_conn.get('clientsecret') or self._parsed_conn.get('password') or self._parsed_conn.get('username')):
-            raise KustoEngineError('Invalid connection string, code cannot be followed username or password or clientsecret."')
+            raise KqlEngineError('Invalid connection string, code cannot be followed username or password or clientsecret."')
 
         # clientsecret can only follow clientid
         if self._parsed_conn.get('clientsecret') and not self._parsed_conn.get('clientid'):
-            raise KustoEngineError('Invalid connection string, clientsecret must be prefixed by clientid."')
+            raise KqlEngineError('Invalid connection string, clientsecret must be prefixed by clientid."')
 
         # code cannot be followerd by clientsecret or username of password
         if self._parsed_conn.get('clientsecret') and (self._parsed_conn.get('password') or self._parsed_conn.get('username')):
-            raise KustoEngineError('Invalid connection string, clientsecret cannot be followed username or password."')
+            raise KqlEngineError('Invalid connection string, clientsecret cannot be followed username or password."')
 
         # password can only follow username
         if self._parsed_conn.get('password') and not self._parsed_conn.get('username'):
-            raise KustoEngineError('Invalid connection string, password must be prefixed by username."')
+            raise KqlEngineError('Invalid connection string, password must be prefixed by username."')
+
+        # database is mandatory
+        if not self._parsed_conn.get('database'):
+            raise KqlEngineError("database is not defined.")
+
+        if not self._parsed_conn.get('cluster'):
+            if not current:
+                raise KqlEngineError("Cluster is not defined.")
+            self._parsed_conn['cluster'] = current._parsed_conn.get('cluster')
 
         # if authentication credential are missing, try to add them from current connection
         if not (self._parsed_conn.get('username') or self._parsed_conn.get('clientid') or self._parsed_conn.get('code')):
-            if not current or not (current._parsed_conn.get('username') or current._parsed_conn.get('clientid')):
-                raise KustoEngineError("username/password NOR clientid/clientsecret are not defined.")
+            if not current:
+                raise KqlEngineError("username/password NOR clientid/clientsecret NOR code() are not defined.")
             self._parsed_conn['clientid'] = current._parsed_conn.get('clientid')
             self._parsed_conn['username'] = current._parsed_conn.get('username')
             self._parsed_conn['password'] = current._parsed_conn.get('password')
@@ -104,10 +110,6 @@ class KustoEngine(object):
             self._parsed_conn['code'] = current._parsed_conn.get('code')
             self._parsed_conn['tenant'] = current._parsed_conn.get('tenant')
 
-        if self._parsed_conn.get('database') and not self._parsed_conn.get('cluster'):
-            if not current or not current._parsed_conn.get('cluster'):
-                raise KustoEngineError("Cluster is not defined.")
-            self._parsed_conn['cluster'] = current._parsed_conn.get('cluster')
 
         # if clientid and it is not code or username/password pattern, get clientsecret interactively
         if self._parsed_conn.get('clientid') and \
@@ -120,26 +122,23 @@ class KustoEngine(object):
         if self._parsed_conn.get('username') and (not self._parsed_conn.get('password') or self._parsed_conn.get('password').lower() == '<password>'):
             self._parsed_conn['password'] = getpass.getpass(prompt = 'please enter password: ')
 
-        if self._parsed_conn.get('database'):
-            self.bind_url = "kusto://tenant('{0}').code('{1}').clientid('{2}').clientsecret('{3}').username('{4}').password('{5}').cluster('{6}').database('{7}')".format(
-                self._parsed_conn.get('tenant'), 
-                self._parsed_conn.get('code'), 
-                self._parsed_conn.get('clientid'), 
-                self._parsed_conn.get('clientsecret'), 
-                self._parsed_conn.get('username'),
-                self._parsed_conn.get('password'),
-                self._parsed_conn.get('cluster'),
-                self._parsed_conn.get('database'))
-            # this is a temporary name, if not unique will be raplace by Connection class
-            self.name = '{0}@{1}'.format(self._parsed_conn.get('database'), self._parsed_conn.get('cluster'))
+        if not (self._parsed_conn.get('code') or self._parsed_conn.get('clientsecret') or self._parsed_conn.get('password')):
+            raise KqlEngineError("credentials are not set.")
+
+        self.cluster_name = self._parsed_conn.get('cluster')
+        self.database_name = self._parsed_conn.get('database')
+        self.bind_url = "kusto://tenant('{0}').code('{1}').clientid('{2}').clientsecret('{3}').username('{4}').password('{5}').cluster('{6}').database('{7}')".format(
+            self._parsed_conn.get('tenant'), 
+            self._parsed_conn.get('code'), 
+            self._parsed_conn.get('clientid'), 
+            self._parsed_conn.get('clientsecret'), 
+            self._parsed_conn.get('username'),
+            self._parsed_conn.get('password'),
+            self._parsed_conn.get('cluster'),
+            self._parsed_conn.get('database'))
 
 
-    def get_client(self):
-        if not self.client:
-            if not self._parsed_conn.get('cluster'):
-                raise KustoEngineError("cluster is not defined.")
-            if not (self._parsed_conn.get('code') or self._parsed_conn.get('clientsecret') or self._parsed_conn.get('password')):
-                raise KustoEngineError("credentials are not set.")
+    def _set_client(self):
             self.client = KustoClient(kusto_cluster=self.cluster_url_template.format(self._parsed_conn.get('cluster')), 
                                       client_id=self._parsed_conn.get('clientid'), 
                                       client_secret=self._parsed_conn.get('clientsecret'), 
@@ -155,16 +154,9 @@ class KustoEngine(object):
                                       authority=self._parsed_conn.get('tenant'))
             self.client._aad_helper = my_aad_helper
 
-
+    def get_client(self):
         return self.client
 
-    def get_database(self):
-        database_name = self._parsed_conn.get('database')
-        if not database_name:
-            raise KustoEngineError("database is not defined.")
-        return database_name
 
 
-class KustoEngineError(Exception):
-    """Generic error class."""
 

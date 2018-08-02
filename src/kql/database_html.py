@@ -3,9 +3,8 @@ import re
 import uuid
 from IPython.core.display import display, HTML
 from IPython.core.magics.display import Javascript
-
-
-
+from kql.display  import Display
+from kql.kusto_engine import KustoEngine
 
 
 class Database_html(object):
@@ -140,3 +139,17 @@ class Database_html(object):
         item = '<b>' +column_name+ '</b> : ' + column_type
         return """<a href="#" class="list-group-item">""" +item+ """</a>"""
 
+    @staticmethod
+    def show_schema(conn):
+        if isinstance(conn, KustoEngine):
+            query = '.show schema'
+            raw_table = conn.execute(query)
+            database_name = conn.get_database()
+            conn_name = conn.get_name()
+            html_str = Database_html.convert_database_metadata_to_html(raw_table.fetchall(), database_name, conn_name)
+            window_name = conn_name.replace('@','_at_') + '_schema'
+            url = Display._html_to_url(html_str, window_name)
+            botton_text = 'show schema ' + conn_name
+            Display.show_window(window_name, url, botton_text)
+        else:
+            return None

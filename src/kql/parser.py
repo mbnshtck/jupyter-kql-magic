@@ -166,11 +166,16 @@ class Parser(object):
                   'vc': {"abbreviation" : "validate_connection_string"},
                   'validate_connection_string': {"flag" : "validate_connection_string", "type" : "bool", "config" : "config.validate_connection_string"},
 
-                  'ss': {"abbreviation" : "show_schema"},
-                  'show_schema': {"flag" : "show_schema", "type" : "bool", "config" : "config.show_schema"},
+                  'ass': {"abbreviation" : "auto_show_schema"},
+                  'auto_show_schema': {"flag" : "auto_show_schema", "type" : "bool", "config" : "config.auto_show_schema"},
 
                   'h': {"abbreviation" : "help"},
                   'help': {"flag" : "help", "type" : "bool", "init" : "False"},
+
+                  'ss': {"abbreviation" : "show_schema"},
+                  'show_schema': {"flag" : "show_schema", "type" : "bool", "init" : "False"},
+
+                  'version': {"flag" : "version", "type" : "bool", "init" : "False"},
                   }
 
         for value in flags_options.values():

@@ -65,7 +65,7 @@ an existing connection by database@cluster
     Poet       733
 
 If no connect string is supplied, ``%kql`` will provide a list of existing connections;
-however, if no connections have yet been made and the environment variable ``CONNECTION_STR``
+however, if no connections have yet been made and the environment variable ``KQL_CONNECTION_STR``
 is available, that will be used.
 
 For secure access, you may dynamically access your credentials (e.g. from your system environment or `getpass.getpass`) to avoid storing your password in the notebook itself. Use the `$` before any variable to access it in your `%kql` command.

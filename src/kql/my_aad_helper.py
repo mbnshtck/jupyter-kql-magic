@@ -42,31 +42,48 @@ class _MyAadHelper(object):
         else:
             code = self.adal_context.acquire_user_code(self.kusto_cluster, self.client_id)
 
-            Display.showInfoMessage(code['message'])
+            # Display.showInfoMessage(code['message'])
 
-            window_name = code["user_code"]
+            # <button onclick="this.style.visibility='hidden';document.getElementById('user_code_p').innerHTML = '';myFunction()">Copy the above code, and Click to open authentication window</button>
+
             url = code['verification_url']
             html_str = """<!DOCTYPE html>
-                <html>
-                <body>
+                <html><body>
 
-                <h1 id="user_code_p">Copy this code:    <b>""" +code["user_code"]+ """   </b></h1>
+                <h1 id="user_code_p"><b>""" +code["user_code"].strip()+ """</b><br></h1>
 
-                <button onclick="this.style.visibility='hidden';document.getElementById('user_code_p').innerHTML = '';myFunction()">Click to open authentication  window """ +window_name+ """</button>
+                <button id='my_button', onclick="this.style.visibility='hidden';kqlMagicCodeAuthFunction()">Copy the above code, and Click to open authentication window</button>
 
                 <script>
-                function myFunction() {
-                    var myWindow = window.open('""" +url+ """', '""" +window_name+ """', "width=200,height=100");
-                    // myWindow.document.write("<p>This window's name is: " + myWindow.name + "</p>");
+                var kqlMagicUserCodeAuthWindow = null
+                function kqlMagicCodeAuthFunction() {
+                    var w = screen.width / 2;
+                    var h = screen.height / 2;
+                    params = 'width='+w+',height='+h
+                    kqlMagicUserCodeAuthWindow = window.open('""" +url+ """', 'kqlMagicUserCodeAuthWindow', params);
                 }
                 </script>
 
-                </body>
-                </html>"""
+                </body></html>"""
 
             Display.show(html_str)
             # webbrowser.open(code['verification_url'])
-            token_response = self.adal_context.acquire_token_with_device_code(self.kusto_cluster, code, self.client_id)
+            try:
+                token_response = self.adal_context.acquire_token_with_device_code(self.kusto_cluster, code, self.client_id)
+            finally:
+                html_str = """<!DOCTYPE html>
+                    <html><body><script>
+
+                        // close authentication window
+                        if (kqlMagicUserCodeAuthWindow && kqlMagicUserCodeAuthWindow.opener != null && !kqlMagicUserCodeAuthWindow.closed) {
+                            kqlMagicUserCodeAuthWindow.close()
+                        }
+                        // clear output cell 
+                        Jupyter.notebook.clear_output(Jupyter.notebook.get_selected_index())
+
+                    </script></body></html>"""
+
+                Display.show(html_str)
 
         return token_response['accessToken']
 

@@ -215,12 +215,14 @@ class ResultSet(list, ColumnGuesserMixin):
         else:
             t = self._getTableHtml()
             html = Display.toHtml(**t)
+        if flags.get("window") and not flags.get("botton_text"):
+            flags["botton_text"] = 'show table ' + (self.title or '')
         Display.show(html, **flags)
         return None
 
     def TableInWindow(self, **kwargs):
         "display the table"
-        return self.Table(**{"window" : True, **kwargs})
+        return self.Table(**{"window" : True, "botton_text" : "show table", **kwargs})
 
     # Printable pretty presentation of the object
     def __str__(self, *args, **kwargs):
@@ -283,11 +285,16 @@ class ResultSet(list, ColumnGuesserMixin):
     def Chart(self, **kwargs):
         "display the chart that was specified in the query"
         flags = {**self.flags, **kwargs}
-        window_mode = flags is not None and flags.get('window')
+        window_mode = flags is not None and flags.get("window")
+        if window_mode and not flags.get("botton_text"):
+            flags["botton_text"] = 'show ' + self.visualization + ' ' + (self.title or '')
         c = self._getChartHtml(window_mode)
-        html = Display.toHtml(**c)
-        Display.show(html, **flags)
-        return None
+        if c is not None:
+            html = Display.toHtml(**c)
+            Display.show(html, **flags)
+            return None
+        else:
+            return self.Table(**kwargs)
 
     def ChartInWindow(self, **kwargs):
         "display the chart that was specified in the query"
@@ -301,7 +308,7 @@ class ResultSet(list, ColumnGuesserMixin):
         # https://kusto.azurewebsites.net/docs/queryLanguage/query_language_renderoperator.html
 
         if not self.is_chart():
-            return ''
+            return None
 
         figure_or_data = None
         # First column is color-axis, second column is numeric
@@ -352,7 +359,7 @@ class ResultSet(list, ColumnGuesserMixin):
             head = '<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>' if window_mode and not self.flags.get("plotly_fs_includejs", False) else ""
             body = plotly.offline.plot(figure_or_data, include_plotlyjs= window_mode and self.flags.get("plotly_fs_includejs", False), output_type='div')
             return {"body" : body, "head" : head}
-        return {}
+        return None
 
 
 

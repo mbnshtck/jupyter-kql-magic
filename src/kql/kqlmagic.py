@@ -21,7 +21,6 @@ from azure.kusto.data import KustoError
 from kql.ai_client import AppinsightsError
 from kql.la_client import LoganalyticsError
 
-from kql.kql_proxy import KqlProxy
 from kql.results import ResultSet
 from kql.parser import Parser
 
@@ -57,7 +56,7 @@ class kqlmagic(Magics, Configurable):
 
     validate_connection_string = Bool(True, config=True, help="Validate connectionString with an implicit query, when query statement is missing. Abbreviation: vc")
     version = Enum([VERSION], VERSION, config=True, help="kqlmagic version")
-    show_schema = Bool(True, config=True, help="Show schema when connecting to a new database. Abbreviation: ss")
+    auto_show_schema = Bool(True, config=True, help="Show schema when connecting to a new database. Abbreviation: ass")
 
 
     # [KUSTO]
@@ -203,70 +202,76 @@ class kqlmagic(Magics, Configurable):
 
         query = parsed['kql'].strip()
         flags = parsed['flags']
-
         suppress_results = flags.get('suppress_results', False) and flags.get('enable_suppress_result', self.enable_suppress_result)
         connection_string = parsed['connection']
+
+        if flags.get('version'):
+            print('kqlmagic version: ' + VERSION)
+
+        if flags.get('help'):
+            help_url = 'http://aka.ms/kdocs'
+            # 'https://docs.loganalytics.io/docs/Language-Reference/Tabular-operators'
+            # 'http://aka.ms/kdocs'
+            # 'https://kusdoc2.azurewebsites.net/docs/queryLanguage/query-essentials/readme.html'
+            # import requests
+            # f = requests.get(help_url)
+            # html = f.text.replace('width=device-width','width=500')
+            # Display.show(html, **{"window" : True, 'name': 'KustoQueryLanguage'})
+            Display.show_window('KustoQueryLanguage', help_url)
+
         try:
             #
             # set connection
             #
 
             conn = Connection.get_connection(connection_string)
-        except Exception as e:
-            if not connection_string and Connection.connections and flags.get('show_conn_list', self.show_conn_list) and not suppress_results:
-                Display.showInfoMessage(Connection.connection_list_formatted())
-            logger().error(str(e))
-            return None
+
+        # parse error
+        except KqlEngineError as e:
+            if flags.get('short_errors', self.short_errors):
+                msg = Connection.tell_format(connect_str)
+                Display.showDangerMessage(str(e))
+                Display.showInfoMessage(msg)
+                return None
+            else:
+                raise
+
+        # parse error
+        except ConnectionError as e:
+            if flags.get('short_errors', self.short_errors):
+                Display.showDangerMessage(str(e))
+                list = Connection.get_connection_list_formatted()
+                if len(list) > 0:
+                    Display.showInfoMessage(list)
+                return None
+            else:
+                raise
 
         try:
+            # validate connection
+            if flags.get('validate_connection_string', self.validate_connection_string) and not conn.flags.get('validate_connection_string'):
+                validation_query = 'range c from 1 to 10 step 1 | count'
+                raw_table = conn.execute(validation_query)
+                conn.set_validation_result(True)
+            conn.flags['validate_connection_string'] = True
+
+            if flags.get('show_schema') or (flags.get('auto_show_schema', self.auto_show_schema) and not conn.flags.get('auto_show_schema')):
+                Database_html.show_schema(conn)
+            conn.flags['auto_show_schema'] = True
+
             if not query:
-                windows = {}
-                if flags.get('help'):
-                    help_url = 'http://aka.ms/kdocs'
-                    # 'https://docs.loganalytics.io/docs/Language-Reference/Tabular-operators'
-                    # 'http://aka.ms/kdocs'
-                    # 'https://kusdoc2.azurewebsites.net/docs/queryLanguage/query-essentials/readme.html'
-                    # import requests
-                    # f = requests.get(help_url)
-                    # html = f.text.replace('width=device-width','width=500')
-                    # Display.show(html, **{'window' : True, 'name': 'KustoQueryLanguage'})
-                    windows['KustoQueryLanguage'] = help_url
                 #
                 # If NO  kql query, just return the current connection
                 #
                 if not connection_string and Connection.connections and flags.get('show_conn_list', self.show_conn_list) and not suppress_results:
-                    Display.showInfoMessage(Connection.connection_list_formatted())
-                else:
-                    # validate connection
-                    if flags.get('validate_connection_string', self.validate_connection_string):
-                        query = 'range c from 1 to 100 step 1 | count'
-                        kql_proxy = KqlProxy(conn)
-                        raw_table = kql_proxy.execute(query)
-                    if not suppress_results:
-                        Display.showInfoMessage(Connection.connection_list_formatted())
-
-                if flags.get('show_schema'):
-                    query = '.show schema'
-                    kql_proxy = KqlProxy(conn)
-                    raw_table = kql_proxy.execute(query)
-                    database_name = conn.get_database()
-                    html_str = Database_html.convert_database_metadata_to_html(raw_table.fetchall(), database_name, conn.name)
-                    name = conn.name.replace('@','_at_') + '_schema'
-                    # name = database_name + '_database_metadata'
-                    url = Display._html_to_url(html_str, name)
-                    windows[name] = url
-
-                if len(windows) > 0:
-                    Display.show_windows(windows)
-
+                    Display.showInfoMessage(Connection.get_connection_list_formatted())
                 return None
             #
             # submit query
             #
             start_time = time.time()
 
-            kql_proxy = KqlProxy(conn)
-            raw_table = kql_proxy.execute(query, user_ns)
+            raw_table = conn.execute(query, user_ns)
 
             end_time = time.time()
             elapsed_timespan = end_time - start_time
@@ -278,13 +283,13 @@ class kqlmagic(Magics, Configurable):
                 saved_result = ResultSet(raw_table, query, flags)
                 saved_result.magic = self
                 saved_result.parsed = parsed
-                saved_result.connection = conn.name
+                saved_result.connection = conn.get_name()
             else:
                 saved_result = result_set
                 saved_result._update(raw_table)
 
             if not connection_string and Connection.connections and flags.get('show_conn_list', self.show_conn_list):
-                saved_result.conn_info = Connection.connection_list_formatted()
+                saved_result.conn_info = Connection.get_connection_list_formatted()
 
             saved_result.start_time = start_time
             saved_result.end_time = end_time
@@ -337,18 +342,14 @@ class kqlmagic(Magics, Configurable):
         except Exception as e:
             if not connection_string and Connection.connections and flags.get('show_conn_list', self.show_conn_list) and not suppress_results:
                 # display list of all connections
-                Display.showInfoMessage(Connection.connection_list_formatted())
+                Display.showInfoMessage(Connection.get_connection_list_formatted())
+
             if flags.get('short_errors', self.short_errors):
-                error_msg = str(e)
-                if error_msg.find('WS-Trust'):
-                    # secutity token issue
-                    error_msg = error_msg.replace('"', '&quot;').replace("'", '&apos;')
-                    Display.showDangerMessage(error_msg)
-                else:
-                    Display.showDangerMessage(error_msg)
+                Display.showDangerMessage(e)
                 return None
             else:
                 raise
+
 
 
 def load_ipython_extension(ip):
@@ -365,42 +366,44 @@ def load_ipython_extension(ip):
         if kql_magic_load_mode.startswith("'") or kql_magic_load_mode.startswith('"'):
             kql_magic_load_mode = kql_magic_load_mode[1:-1].strip()
     if kql_magic_load_mode != 'silent':
-        messages = ["Kusto is a log analytics cloud platform optimized for ad-hoc big data queries. Read more about it here: http://aka.ms/kdocs",
-                    "Run '%config kqlmagic' for configuration.",
-                    "Run '%kql?' for syntax."]
-        # Display.showInfoMessage(messages)
         html_str = """<html>
         <head>
         <style>
-        .flex-container {
+        .kqlmagic-banner {
             display: flex; 
             background-color: #d9edf7;
         }
-        .flex-container > div {
+        .kqlmagic-banner > div {
             margin: 10px; 
             padding: 20px; 
             color: #3a87ad; 
-            font-size: 16px;
+            font-size: 13px;
         }
         </style>
         </head>
         <body>
-            <div class='flex-container'>
+            <div class='kqlmagic-banner'>
                 <div><img src='data:image/png;base64,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'></div>
                 <div>
                     <p>Kusto is a log analytics cloud platform optimized for ad-hoc big data queries. Read more about it here: http://aka.ms/kdocs</p>
-                    <p>Run '%config kqlmagic' for configuration.</p>
-                    <p>Run '%kql?' for syntax.</p>
+                    <p>   &bull; kql language reference: Click on 'Help' tab > and Select 'kql referece'<br>
+                      &bull; kqlmagic configuarion: Run in cell '%config kqlmagic'<br>
+                      &bull; kqlmagic syntax: Run in cell '%kql?'<br>
+                      &bull; kqlmagic upgrate syntax: Run 'pip install git+git://github.com/mbnshtck/jupyter-kql-magic.git --upgrade'<br>
                 </div>
             </div>
         </body>
         </html>"""
         Display.show(html_str)
+        Display.showInfoMessage("""kqlmagic version: """ +VERSION+ """, source: https://github.com/mbnshtck/jupyter-kql-magic""")
         #<div><img src='https://az818438.vo.msecnd.net/icons/kusto.png'></div>
     result = ip.register_magics(kqlmagic)
     override_default_configuration(ip, kql_magic_load_mode)
     set_default_connections(ip, kql_magic_load_mode)
-    display(Javascript("""IPython.notebook.kernel.execute("NOTEBOOK_URL = '" + window.location + "'")"""))
+    get_ipython().kernel._trait_values['help_links'].append({'text': 'kql Reference', 'url': 'http://aka.ms/kdocs'})
+    display(Javascript("""IPython.notebook.kernel.reconnect();"""))
+    time.sleep(1)
+    display(Javascript("""IPython.notebook.kernel.execute("NOTEBOOK_URL = '" + window.location + "'");"""))
     time.sleep(5)
     return result
 

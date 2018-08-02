@@ -168,24 +168,6 @@ class KqlResponse(object):
         return self.row_count > 0
 
 
-class KqlProxy(object):
-
-    # Object constructor
-    def __init__(self, conn):
-        self.conn = conn
-
-
-    def execute(self, code, user_namespace = None):
-        self.headers = None
-        self.rows = None
-        self.code = code
-        if code.strip():
-            client = self.conn.get_client()
-            response = client.execute(self.conn.get_database(), code, False)
-            return KqlResponse(response)
-
-
-
 class FakeResultProxy(object):
     """A fake class that pretends to behave like the ResultProxy.
     """
