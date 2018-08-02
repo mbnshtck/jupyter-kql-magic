@@ -42,3 +42,4 @@ nosetests.xml
 
 #local dev folder
 **/local_dev_folder
+**/temp_showfiles
