@@ -44,7 +44,7 @@ class Display(object):
         text_file = open(file_name + ".html", "w")
         text_file.write(html_str)
         text_file.close()
-        return Display._getServerUrl(file_name)
+        return Display.notebook_url +file_name+ '.html' 
 
     @staticmethod
     def _get_name(**kwargs):
@@ -112,15 +112,6 @@ class Display(object):
             </body></html>"""
         # print(html_str)
         return html_str
-
-    @staticmethod
-    def _getServerUrl(name):
-        # display(Javascript("""IPython.notebook.kernel.execute("NOTEBOOK_URL = '" + window.location + "'")"""))
-        # print('NOTEBOOK_URL = {0}'.format(Display.notebook_url))
-        parts = Display.notebook_url.split('/')
-        parts.pop()
-        parts.append(name)
-        return '/'.join(parts) +  ".html"
 
     @staticmethod
     def toHtml(**kwargs):

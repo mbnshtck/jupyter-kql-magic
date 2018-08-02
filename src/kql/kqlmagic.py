@@ -197,8 +197,21 @@ class kqlmagic(Magics, Configurable):
 
         if Display.notebook_url is None:
             # display(Javascript("""IPython.notebook.kernel.execute("NOTEBOOK_URL = '" + window.location + "'")"""))
-            Display.notebook_url = user_ns.get("NOTEBOOK_URL")
-            # print('NOTEBOOK_URL = {0} '.format(Display.notebook_url))
+
+            notebook_url = user_ns.get("NOTEBOOK_URL")
+            if notebook_url is not None:
+                end = notebook_url.find('.notebooks.azure.com/')
+                # azure notebook environment
+                if (end > 0):
+                    start = notebook_url.find('//') + 2
+                    library, user = notebook_url[start:end].split('-')
+                    Display.notebook_url = 'https://notebooks.azure.com/api/user/' +user+ '/library/' +library+ '/html/'
+                else:
+                    parts = notebook_url.split('/')
+                    parts.pop()
+                    Display.notebook_url = '/'.join(parts) +  "/"
+
+            # print('NOTEBOOK_URL = {0} '.format(notebook_url))
 
         query = parsed['kql'].strip()
         flags = parsed['flags']
