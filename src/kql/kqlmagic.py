@@ -27,6 +27,8 @@ from kql.parser import Parser
 from kql.log  import Logger, logger, set_logger, create_log_context, set_logging_options
 from kql.display  import Display
 from kql.database_html  import Database_html
+from kql.help_html import Help_html
+
 
 @magics_class
 class kqlmagic(Magics, Configurable):
@@ -420,17 +422,7 @@ def load_ipython_extension(ip):
     set_default_connections(ip, kql_magic_load_mode)
 
     # add help link
-    help_links = get_ipython().kernel._trait_values['help_links']
-    found = False
-    for link in help_links:
-        if link.get('text') == 'kql Reference':
-            found = True
-            break
-    if not found:
-        help_links.append({'text': 'kql Reference', 'url': 'http://aka.ms/kdocs'})
-        # get_ipython().kernel._trait_values['help_links'].append({'text': 'kql Reference', 'url': 'http://aka.ms/kdocs'})
-    display(Javascript("""IPython.notebook.kernel.reconnect();"""))
-    time.sleep(1)
+    Help_html.add_menu_item('kql Reference', 'http://aka.ms/kdocs')
 
     if not get_ipython().dir_stack:
         root_path = os.getcwd()
@@ -441,7 +433,7 @@ def load_ipython_extension(ip):
     if not os.path.exists(showfiles_folder_Full_name):
         os.makedirs(showfiles_folder_Full_name)
     Display.showfiles_base_path = showfiles_folder_Full_name + '/'
-    print(Display.showfiles_base_path)
+    # print(Display.showfiles_base_path)
 
     # get notebook location
     display(Javascript("""IPython.notebook.kernel.execute("NOTEBOOK_URL = '" + window.location + "'");"""))

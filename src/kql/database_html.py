@@ -5,13 +5,20 @@ from IPython.core.display import display, HTML
 from IPython.core.magics.display import Javascript
 from kql.display  import Display
 from kql.kusto_engine import KustoEngine
+from kql.ai_engine import AppinsightsEngine
+from kql.help_html import Help_html
 
 
 class Database_html(object):
     """
     """
 
-    application_insights_tables = ['requests', 'exceptions', 'dependencies', 'traces', 'events', 'metrics', 'customEvents', 'pageViews', 'availabilityResults']
+    # optional queries to get list, itemType is as the table name without the s
+    # union * | summarize any(*) by itemType | project itemType
+    # %kql union * | project itemType | summarize any(*) by itemType
+    # %kql union * | project itemType | distinct *
+    application_insights_tables = ['requests', 'exceptions', 'dependencies', 'traces', 'events', 'customEvents', 'metrics', 'customMetrics', 'pageViews', 'browserTimings', 
+                                   'availabilityResults']
     database_metadata_css = """.just-padding {
       height: 100%;
       width: 100%;
@@ -90,8 +97,7 @@ class Database_html(object):
         </div></div></body></html>"""
 
     @staticmethod
-    def convert_database_metadata_to_html(rows, databaseName, connectionName, **kwargs):
-        database_metadata_tree = Database_html._create_database_metadata_tree(rows, databaseName, **kwargs)
+    def convert_database_metadata_to_html(database_metadata_tree, connectionName, **kwargs):
         item = ''
         for table in database_metadata_tree.keys():
             table_metadata_tree = database_metadata_tree.get(table)
@@ -141,15 +147,36 @@ class Database_html(object):
 
     @staticmethod
     def show_schema(conn):
-        if isinstance(conn, KustoEngine):
-            query = '.show schema'
-            raw_table = conn.execute(query)
+        if isinstance(conn, KustoEngine) or isinstance(conn, AppinsightsEngine):
             database_name = conn.get_database()
             conn_name = conn.get_name()
-            html_str = Database_html.convert_database_metadata_to_html(raw_table.fetchall(), database_name, conn_name)
+
+            if isinstance(conn, KustoEngine):
+                query = '.show schema'
+                raw_table = conn.execute(query)
+                database_metadata_tree = Database_html._create_database_metadata_tree(raw_table.fetchall(), database_name)
+
+            elif isinstance(conn, AppinsightsEngine):
+                database_metadata_tree = {}
+                for table_name in Database_html.application_insights_tables:
+                    query = table_name + " | getschema"
+                    try:
+                        raw_table = conn.execute(query)
+                        rows = raw_table.fetchall()
+                        if (raw_table.returns_rows()):
+                            database_metadata_tree[table_name] = {}
+                            for row in rows:
+                                column_name = row['ColumnName']
+                                column_type = row['ColumnType']
+                                if column_name and len(column_name) > 0 and column_type and len(column_type) > 0:
+                                    database_metadata_tree.get(table_name)[column_name] = column_type
+                    except:
+                        pass
+            html_str = Database_html.convert_database_metadata_to_html(database_metadata_tree, conn_name)
             window_name = conn_name.replace('@','_at_') + '_schema'
             url = Display._html_to_url(html_str, window_name)
             botton_text = 'show schema ' + conn_name
+            Help_html.add_menu_item(conn_name, url)
             Display.show_window(window_name, url, botton_text)
         else:
             return None
