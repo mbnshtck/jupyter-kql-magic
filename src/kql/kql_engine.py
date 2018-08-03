@@ -28,6 +28,11 @@ class KqlEngine(object):
             raise KqlEngineError("Database is not defined.")
         return self.database_name
 
+    def get_cluster(self):
+        if not self.cluster_name:
+            raise KqlEngineError("Cluster is not defined.")
+        return self.cluster_name
+
     def get_name(self):
         if self.database_name and self.cluster_name:
             return '{0}@{1}'.format(self.database_name, self.cluster_name)

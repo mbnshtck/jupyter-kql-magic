@@ -13,6 +13,7 @@ import getpass
 class _MyAadHelper(object):
     def __init__(self, kusto_cluster, client_id=None, client_secret=None, username=None, password=None, authority=None):
         self.adal_context = AuthenticationContext('https://login.windows.net/{0}'.format(authority or 'microsoft.com'))
+        self.code_adal_context = AuthenticationContext('https://login.windows.net/{0}'.format(authority or 'microsoft.com'))
         self.kusto_cluster = kusto_cluster
         self.client_id = client_id or "db662dc1-0cfe-4e1c-a843-19a68e65be58"
         self.client_secret = client_secret
@@ -23,6 +24,7 @@ class _MyAadHelper(object):
         """ A method to acquire tokens from AAD. """
         # print("my_aad_helper_acquire_token")
         token_response = self.adal_context.acquire_token(self.kusto_cluster, self.username, self.client_id)
+
         if token_response is not None:
             expiration_date = dateutil.parser.parse(token_response['expiresOn'])
             if expiration_date > datetime.utcnow() + timedelta(minutes=5):

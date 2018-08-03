@@ -28,6 +28,9 @@ from kql.log  import Logger, logger, set_logger, create_log_context, set_logging
 from kql.display  import Display
 from kql.database_html  import Database_html
 from kql.help_html import Help_html
+from kql.kusto_engine import KustoEngine
+from adal import TokenCache
+
 
 
 @magics_class
@@ -243,7 +246,6 @@ class kqlmagic(Magics, Configurable):
             #
             # set connection
             #
-
             conn = Connection.get_connection(connection_string)
 
         # parse error
@@ -271,8 +273,27 @@ class kqlmagic(Magics, Configurable):
             # validate connection
             if flags.get('validate_connection_string', self.validate_connection_string) and not conn.flags.get('validate_connection_string'):
                 validation_query = 'range c from 1 to 10 step 1 | count'
+                retry_with_code = False
+                try:
+                    raw_table = conn.execute(validation_query)
+                    conn.set_validation_result(True)
+                except Exception as e:
+                    msg = str(e)
+                    if msg.find('AADSTS50079') > 0 and msg.find('multi-factor authentication') > 0 and isinstance(conn, KustoEngine):
+                        Display.showDangerMessage(str(e))
+                        retry_with_code = True
+                    else:
+                        raise e
+
+            if retry_with_code:
+                Display.showInfoMessage('replaced connection with code authentication')
+                database_name = conn.get_database()
+                cluster_name = conn.get_cluster()
+                connection_string = "kusto://code().cluster('" +cluster_name+ "').database('" +database_name+ "')"
+                conn = Connection.get_connection(connection_string)
                 raw_table = conn.execute(validation_query)
                 conn.set_validation_result(True)
+
             conn.flags['validate_connection_string'] = True
 
             if flags.get('show_schema') or (flags.get('auto_show_schema', self.auto_show_schema) and not conn.flags.get('auto_show_schema')):
