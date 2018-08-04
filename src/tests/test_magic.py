@@ -111,12 +111,12 @@ def test_duplicate_column_names_accepted():
     assert (u'Brecht', u'Brecht') in result
 
 @with_setup(_setup, _teardown)
-def test_autolimit():
-    ip.run_line_magic('config',  "kqlmagic.autolimit = 0")
+def test_auto_limit():
+    ip.run_line_magic('config',  "kqlmagic.auto_limit = 0")
     result = ip.run_line_magic('kql',  query1)
     print(result)
     assert len(result) == 2
-    ip.run_line_magic('config',  "kqlmagic.autolimit = 1")
+    ip.run_line_magic('config',  "kqlmagic.auto_limit = 1")
     result = ip.run_line_magic('kql',  query1)
     print(result)
     assert len(result) == 1
@@ -128,30 +128,30 @@ query5 = """
         T
         | sort by Result asc
         """
-def test_displaylimit():
-    ip.run_line_magic('config',  "kqlmagic.autolimit = None")
-    ip.run_line_magic('config',  "kqlmagic.displaylimit = None")
+def test_display_limit():
+    ip.run_line_magic('config',  "kqlmagic.auto_limit = None")
+    ip.run_line_magic('config',  "kqlmagic.display_limit = None")
     result = ip.run_line_magic('kql', query5)
     print(result)
     assert 'apple' in result._repr_html_()
     assert 'banana' in result._repr_html_()
     assert 'cherry' in result._repr_html_()
-    ip.run_line_magic('config',  "kqlmagic.displaylimit = 1")
+    ip.run_line_magic('config',  "kqlmagic.display_limit = 1")
     assert 'apple' in result._repr_html_()
     assert 'cherry' not in result._repr_html_()
 
 query6 = "$TEST_CONNECTION_STR let T = view () { datatable(first_name:string, last_name:string, year_of_death:long)['William', 'Shakespeare', 1616, 'Bertold', 'Brecht', 1956] }; T"
 
 @with_setup(_setup, _teardown)
-def test_column_local_vars():
-    ip.run_line_magic('config',  "kqlmagic.column_local_vars = True")
+def test_to_column_local_vars():
+    ip.run_line_magic('config',  "kqlmagic.to_column_local_vars = True")
     result = ip.run_line_magic('kql', query6)
     print(result)
     assert result is None
     assert 'William' in ip.user_global_ns['first_name']
     assert 'Shakespeare' in ip.user_global_ns['last_name']
     assert len(ip.user_global_ns['first_name']) == 2
-    ip.run_line_magic('config',  "kqlmagic.column_local_vars = False")
+    ip.run_line_magic('config',  "kqlmagic.to_column_local_vars = False")
 
 @with_setup(_setup, _teardown)
 def test_userns_not_changed():
@@ -170,15 +170,15 @@ def test_bind_vars():
     """
 
 @with_setup(_setup, _teardown)
-def test_autopandas():
-    ip.run_line_magic('config',  "kqlmagic.autopandas = True")
+def test_auto_dataframe():
+    ip.run_line_magic('config',  "kqlmagic.auto_dataframe = True")
     dframe = ip.run_cell("%kql {0}".format(query1))
     assert dframe.success
     assert dframe.result.name[0] == 'foo'
 
 @with_setup(_setup, _teardown)
 def test_csv():
-    ip.run_line_magic('config',  "kqlmagic.autopandas = False")  # uh-oh
+    ip.run_line_magic('config',  "kqlmagic.auto_dataframe = False")  # uh-oh
     result = ip.run_line_magic('kql', query1)
     result = result.csv()
     for row in result.splitlines():
@@ -187,7 +187,7 @@ def test_csv():
 
 @with_setup(_setup, _teardown)
 def test_csv_to_file():
-    ip.run_line_magic('config',  "kqlmagic.autopandas = False")  # uh-oh
+    ip.run_line_magic('config',  "kqlmagic.auto_dataframe = False")  # uh-oh
     result = ip.run_line_magic('kql', query1)
     with tempfile.TemporaryDirectory() as tempdir:
         fname = os.path.join(tempdir, 'test.csv')

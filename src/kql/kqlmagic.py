@@ -40,12 +40,12 @@ class kqlmagic(Magics, Configurable):
     Provides the %%kql magic."""
 
 
-    autolimit = Int(0, config=True, allow_none=True, help="Automatically limit the size of the returned result sets. Abbreviation: al")
+    auto_limit = Int(0, config=True, allow_none=True, help="Automatically limit the size of the returned result sets. Abbreviation: al")
     prettytable_style = Enum(['DEFAULT', 'MSWORD_FRIENDLY', 'PLAIN_COLUMNS', 'RANDOM'], 'DEFAULT', config=True, help="Set the table printing style to any of prettytable's defined styles. Abbreviation: ptst")
     short_errors = Bool(True, config=True, help="Don't display the full traceback on KQL Programming Error. Abbreviation: se")
-    displaylimit = Int(None, config=True, allow_none=True, help="Automatically limit the number of rows displayed (full result set is still stored). Abbreviation: dl")
-    autopandas = Bool(False, config=True, help="Return Pandas DataFrames instead of regular result sets. Abbreviation: ap")
-    column_local_vars = Bool(False, config=True, help="Return data into local variables from column names. Abbreviation: cls")
+    display_limit = Int(None, config=True, allow_none=True, help="Automatically limit the number of rows displayed (full result set is still stored). Abbreviation: dl")
+    auto_dataframe = Bool(False, config=True, help="Return Pandas dataframe instead of regular result sets. Abbreviation: ad")
+    to_column_local_vars = Bool(False, config=True, help="Return data into local variables from column names. Abbreviation: tc")
     feedback = Bool(True, config=True, help="Print number of records returned, and assigned variables. Abbreviation: f")
     show_conn_list = Bool(True, config=True, help="Print connection list, when connection not specified. Abbreviation: scl")
     dsn_filename = Unicode('odbc.ini', config=True, help="Path to DSN file. "
@@ -60,8 +60,7 @@ class kqlmagic(Magics, Configurable):
     plotly_fs_includejs = Bool(False, config=True, help="Include plotly javascript code when for window display mode, if set to False (default), it download from https://cdn.plot.ly/plotly-latest.min.js. Abbreviation: pfi")
 
     validate_connection_string = Bool(True, config=True, help="Validate connectionString with an implicit query, when query statement is missing. Abbreviation: vc")
-    version = Enum([VERSION], VERSION, config=True, help="kqlmagic version")
-    auto_show_schema = Bool(True, config=True, help="Show schema when connecting to a new database. Abbreviation: ass")
+    auto_popup_schema = Bool(True, config=True, help="Popup schema when connecting to a new database. Abbreviation: aps")
 
     # constants
     showfiles_folder_name = "temp_showfiles"
@@ -220,6 +219,9 @@ class kqlmagic(Magics, Configurable):
                     Display.showfiles_base_url = '/'.join(parts) 
                     # assumes it is at root
                 Display.showfiles_base_url += "/" + self.showfiles_folder_name + "/"
+            else:
+                print('missing NOTEBOOK_URL !!!')
+                raise ConnectionError('missing NOTEBOOK_URL') 
 
             # print('NOTEBOOK_URL = {0} '.format(notebook_url))
 
@@ -271,9 +273,9 @@ class kqlmagic(Magics, Configurable):
 
         try:
             # validate connection
+            retry_with_code = False
             if flags.get('validate_connection_string', self.validate_connection_string) and not conn.flags.get('validate_connection_string'):
                 validation_query = 'range c from 1 to 10 step 1 | count'
-                retry_with_code = False
                 try:
                     raw_table = conn.execute(validation_query)
                     conn.set_validation_result(True)
@@ -296,9 +298,9 @@ class kqlmagic(Magics, Configurable):
 
             conn.flags['validate_connection_string'] = True
 
-            if flags.get('show_schema') or (flags.get('auto_show_schema', self.auto_show_schema) and not conn.flags.get('auto_show_schema')):
+            if flags.get('show_schema') or (flags.get('auto_popup_schema', self.auto_popup_schema) and not conn.flags.get('auto_popup_schema')):
                 Database_html.show_schema(conn)
-            conn.flags['auto_show_schema'] = True
+            conn.flags['auto_popup_schema'] = True
 
             if not query:
                 #
@@ -342,22 +344,22 @@ class kqlmagic(Magics, Configurable):
                 minutes, seconds = divmod(elapsed_timespan, 60)
                 saved_result.info.append('Done ({:0>2}:{:06.3f}): {} records'.format(int(minutes), seconds, saved_result.records_count))
 
-            logger().debug("Results: {} x {}".format(len(saved_result), len(saved_result.keys)))
+            logger().debug("Results: {} x {}".format(len(saved_result), len(saved_result.columns_name)))
 
-            if flags.get('column_local_vars', self.column_local_vars):
+            if flags.get('to_column_local_vars', self.to_column_local_vars):
                 #Instead of returning values, set variables directly in the
                 #users namespace. Variable names given by column names
 
                 if flags.get('feedback', self.feedback):
-                    saved_result.info.append('Returning raw data to local variables [{}]'.format(', '.join(saved_result.keys)))
+                    saved_result.info.append('Returning raw data to local variables [{}]'.format(', '.join(saved_result.columns_name)))
 
                 self.shell.user_ns.update(saved_result.dict())
                 result = None
 
-            if flags.get('autopandas', self.autopandas):
+            if flags.get('auto_dataframe', self.auto_dataframe):
                 if flags.get('feedback', self.feedback):
                     saved_result.info.append('Returning data converted to pandas dataframe')
-                result = saved_result.Dataframe()
+                result = saved_result.to_dataframe()
 
             if flags.get('result_var') and result_set is None:
                 result_var = flags['result_var']
@@ -370,7 +372,7 @@ class kqlmagic(Magics, Configurable):
                 return None
 
             if not suppress_results:
-                if flags.get('autopandas', self.autopandas):
+                if flags.get('auto_dataframe', self.auto_dataframe):
                     Display.showSuccessMessage(saved_result.info)
                 else:
                     saved_result.display_info = True
@@ -389,7 +391,7 @@ class kqlmagic(Magics, Configurable):
                 Display.showDangerMessage(e)
                 return None
             else:
-                raise
+                raise e
 
 
 
@@ -439,8 +441,8 @@ def load_ipython_extension(ip):
         Display.showInfoMessage("""kqlmagic version: """ +VERSION+ """, source: https://github.com/mbnshtck/jupyter-kql-magic""")
         #<div><img src='https://az818438.vo.msecnd.net/icons/kusto.png'></div>
     result = ip.register_magics(kqlmagic)
-    override_default_configuration(ip, kql_magic_load_mode)
-    set_default_connections(ip, kql_magic_load_mode)
+    _override_default_configuration(ip, kql_magic_load_mode)
+    _set_default_connections(ip, kql_magic_load_mode)
 
     # add help link
     Help_html.add_menu_item('kql Reference', 'http://aka.ms/kdocs')
@@ -466,11 +468,11 @@ def unload_ipython_extension(ip):
     del ip.magics_manager.magics['cell']['kql']
     del ip.magics_manager.magics['line']['kql']
 
-def override_default_configuration(ip, load_mode):
+def _override_default_configuration(ip, load_mode):
     """override default kqlmagic configuration from environment variable KQL_MAGIC_CONFIGURATION.
        the settings should be separated by a semicolon delimiter.
        for example:
-       KQL_MAGIC_CONFIGURATION = 'autolimit = 1000; autopandas = True' """
+       KQL_MAGIC_CONFIGURATION = 'auto_limit = 1000; auto_dataframe = True' """
 
     kql_magic_configuration = os.getenv('KQL_MAGIC_CONFIGURATION')
     if kql_magic_configuration:
@@ -482,7 +484,7 @@ def override_default_configuration(ip, load_mode):
         for pair in pairs:
             ip.run_line_magic('config',  'kqlmagic.{0}'.format(pair.strip()))
 
-def set_default_connections(ip, load_mode):
+def _set_default_connections(ip, load_mode):
     kql_magic_connection_str = os.getenv('KQL_MAGIC_CONNECTION_STR')
     if kql_magic_connection_str:
         kql_magic_connection_str = kql_magic_connection_str.strip()
@@ -515,15 +517,15 @@ Answer: Yes you can. The output cell (if not supressed) will show the chart that
 
 Can I plot the chart of the last query from python?
 Answer: Yes you can, assuming the kql query contained a render command. Execute the chart method on the result. for example:
-        _kql_raw_result_.Chart()
+        _kql_raw_result_.show_chart()
 
 Can I display the table of the last query from python?
 Answer: Yes you can, assuming the kql query contained a render command. Execute the chart method on the result. for example:
-        _kql_raw_result_.Table()
+        _kql_raw_result_.show_table()
 
 Can I submit last query again from python?
 Answer: Yes you can. Execute the submit method on the result. for example:
-        _kql_raw_result_.Submit()
+        _kql_raw_result_.submit()
 
 Can I get programmaticaly the last query string?
 Answer: Yes you can. Get it from the query property of the result. for example:
@@ -540,20 +542,20 @@ Answer: Yes you can. Get it from the folowing query properties: start_time, end_
         _kql_raw_result_.elapsed_timespan
 
 Can I convert programmaticaly the raw results to a dataframe?
-Answer: Yes you can. Execute the Dataframe method on the result. For example:
-        _kql_raw_result_.Dataframe()
+Answer: Yes you can. Execute the to_dataframe method on the result. For example:
+        _kql_raw_result_.to_dataframe()
 
 Can I get the kql query results as a dataframe instead of raw data?
-Answer: Yes you can. Set the kql magic configuration parameter autopandas to true, and all subsequent queries
+Answer: Yes you can. Set the kql magic configuration parameter auto_dataframe to true, and all subsequent queries
         will return a dataframe instead of raw data (_kql_raw_result_ will continue to hold the raw results). For example:
-        %config kqlmagic.autopandas = True
+        %config kqlmagic.auto_dataframe = True
         %kql var1 << T | where c > 100 // var1 will hold the dataframe
 
-If I use kqlmagic.autopandas = True, How can I get programmaticaly the last dataframe results of the last submitted query?
-Answer: Execute the Dataframe method on the result. For example:
-        _kql_raw_result_.Dataframe()
+If I use kqlmagic.auto_dataframe = True, How can I get programmaticaly the last dataframe results of the last submitted query?
+Answer: Execute the to_dataframe method on the result. For example:
+        _kql_raw_result_.to_dataframe()
 
-If I use kqlmagic.autopandas = True, How can I get programmaticaly the last raw results of the last submitted query?
+If I use kqlmagic.auto_dataframe = True, How can I get programmaticaly the last raw results of the last submitted query?
 Answer: _kql_raw_result_ holds the raw results.
 
 """

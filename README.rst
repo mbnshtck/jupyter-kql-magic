@@ -33,7 +33,7 @@ Examples
     =================================================================================
     Alice    Alice      ALICE    a lady attending on Princess Katherine   22
 
-    In [4]: result.keys
+    In [4]: result.columns_name
     Out[5]: [u'charid', u'charname', u'abbrev', u'description', u'speechcount']
 
     In [6]: result[0][0]
@@ -150,9 +150,9 @@ Configuration
 -------------
 
 Query results are loaded as lists, so very large result sets may use up
-your system's memory and/or hang your browser.  There is no autolimit
-by default.  However, `autolimit` (if set) limits the size of the result
-set (usually with a `LIMIT` clause in the KQL).  `displaylimit` is similar,
+your system's memory and/or hang your browser.  There is no auto_limit
+by default.  However, `auto_limit` (if set) limits the size of the result
+set (usually with a `LIMIT` clause in the KQL).  `display_limit` is similar,
 but the entire result set is still pulled into memory (for later analysis);
 only the screen display is truncated.
 
@@ -161,13 +161,13 @@ only the screen display is truncated.
     In [2]: %config kqlmagic
     kqlmagic options
     --------------
-    kqlmagic.autolimit=<Int>
+    kqlmagic.auto_limit=<Int>
         Current: 0
         Automatically limit the size of the returned result sets
-    kqlmagic.autopandas=<Bool>
+    kqlmagic.auto_dataframe=<Bool>
         Current: False
         Return Pandas DataFrames instead of regular result sets
-    kqlmagic.displaylimit=<Int>
+    kqlmagic.display_limit=<Int>
         Current: 0
         Automatically limit the number of rows displayed (full result set is still
         stored)
@@ -184,7 +184,7 @@ only the screen display is truncated.
 
     In[3]: %config kqlmagic.feedback = False
 
-Please note: if you have autopandas set to true, the option will not apply. You can set the pandas display limit by using the pandas ``max_rows`` option as described in the `pandas documentation <http://pandas.pydata.org/pandas-docs/version/0.18.1/options.html#frequently-used-options>`_.
+Please note: if you have auto_dataframe set to true, the option will not apply. You can set the pandas display limit by using the pandas ``max_rows`` option as described in the `pandas documentation <http://pandas.pydata.org/pandas-docs/version/0.18.1/options.html#frequently-used-options>`_.
 
 Pandas
 ------

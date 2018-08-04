@@ -115,8 +115,8 @@ class Parser(object):
         words = code.split()
         flags = {}
         flags_options = {
-                  'ap' : {"abbreviation" : "autopandas"},
-                  'autopandas' : {"flag" : "autopandas", "type" : "bool", "config" : "config.autopandas"},
+                  'ad' : {"abbreviation" : "auto_dataframe"},
+                  'auto_dataframe' : {"flag" : "auto_dataframe", "type" : "bool", "config" : "config.auto_dataframe"},
 
                   'se' : {"abbreviation" : "short_errors"},
                   'short_errors' : {"flag" : "short_errors", "type" : "bool", "config" : "config.short_errors"},
@@ -127,8 +127,8 @@ class Parser(object):
                   'scl': {"abbreviation" : "show_conn_list"},
                   'show_conn_list': {"flag" : "show_conn_list", "type" : "bool", "config" : "config.show_conn_list"},
 
-                  'cls' : {"abbreviation" : "column_local_vars"},
-                  'column_local_vars' : {"flag" : "column_local_vars", "type" : "bool", "config" : "config.column_local_vars"},
+                  'tc' : {"abbreviation" : "to_column_local_vars"},
+                  'to_column_local_vars' : {"flag" : "to_column_local_vars", "type" : "bool", "config" : "config.to_column_local_vars"},
 
                   'sqt' : {"abbreviation" : "show_query_time"},
                   'show_query_time' : {"flag" : "show_query_time", "type" : "bool", "config" : "config.show_query_time"},
@@ -142,11 +142,11 @@ class Parser(object):
                   'win': {"abbreviation" : "window"},
                   'window': {"flag" : "window", "type" : "bool", "init" : "False"},
 
-                  'al': {"abbreviation" : "autolimit"},
-                  'autolimit': {"flag" : "autolimit", "type" : "int", "config" : "config.autolimit"},
+                  'al': {"abbreviation" : "auto_limit"},
+                  'auto_limit': {"flag" : "auto_limit", "type" : "int", "config" : "config.auto_limit"},
                   
-                  'dl': {"abbreviation" : "displaylimit"},
-                  'displaylimit': {"flag" : "displaylimit", "type" : "int", "config" : "config.displaylimit"},
+                  'dl': {"abbreviation" : "display_limit"},
+                  'display_limit': {"flag" : "display_limit", "type" : "int", "config" : "config.display_limit"},
 
                   'ptst': {"abbreviation" : "prettytable_style"},
                   'prettytable_style': {"flag" : "prettytable_style", "type" : "str", "config" : "config.prettytable_style"},
@@ -166,8 +166,8 @@ class Parser(object):
                   'vc': {"abbreviation" : "validate_connection_string"},
                   'validate_connection_string': {"flag" : "validate_connection_string", "type" : "bool", "config" : "config.validate_connection_string"},
 
-                  'ass': {"abbreviation" : "auto_show_schema"},
-                  'auto_show_schema': {"flag" : "auto_show_schema", "type" : "bool", "config" : "config.auto_show_schema"},
+                  'aps': {"abbreviation" : "auto_popup_schema"},
+                  'auto_popup_schema': {"flag" : "auto_popup_schema", "type" : "bool", "config" : "config.auto_popup_schema"},
 
                   'h': {"abbreviation" : "help"},
                   'help': {"flag" : "help", "type" : "bool", "init" : "False"},

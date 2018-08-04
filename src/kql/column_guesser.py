@@ -31,11 +31,11 @@ class ColumnGuesserMixin(object):
     def _build_columns(self, name=None):
         rows = self
         if name:
-            idx = self.keys.index(name)
+            idx = self.columns_name.index(name)
             rows = sorted(self, key=lambda row: row[idx])   # sort by index
 
 
-        self.columns = [Column() for col in self.keys]
+        self.columns = [Column() for col in self.columns_name]
         for row in rows:
             for (col_idx, col_val) in enumerate(row):
                 col = self.columns[col_idx]
@@ -46,7 +46,7 @@ class ColumnGuesserMixin(object):
                 elif not isinstance(col_val, datetime):
                     col.is_datetime = False
             
-        for (idx, key_name) in enumerate(self.keys):
+        for (idx, key_name) in enumerate(self.columns_name):
             self.columns[idx].name = key_name
 
         self.x = Column()

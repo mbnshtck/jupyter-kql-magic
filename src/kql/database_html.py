@@ -175,7 +175,7 @@ class Database_html(object):
             html_str = Database_html.convert_database_metadata_to_html(database_metadata_tree, conn_name)
             window_name = conn_name.replace('@','_at_') + '_schema'
             url = Display._html_to_url(html_str, window_name)
-            botton_text = 'show schema ' + conn_name
+            botton_text = 'popup schema ' + conn_name
             Help_html.add_menu_item(conn_name, url)
             Display.show_window(window_name, url, botton_text)
         else:
