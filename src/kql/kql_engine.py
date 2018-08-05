@@ -9,7 +9,7 @@ class KqlEngine(object):
         self.database_name = None
         self.cluster_name = None
         self.client = None
-        self.flags = {}
+        self.options = {}
 
         self.validated = None
 

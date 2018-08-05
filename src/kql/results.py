@@ -110,7 +110,7 @@ class ResultSet(list, ColumnGuesserMixin):
     """
 
     # Object constructor
-    def __init__(self, queryResult, query, flags):
+    def __init__(self, queryResult, query, options):
         self.info = []
         self.conn_info = []
         # list of columns_name
@@ -118,7 +118,7 @@ class ResultSet(list, ColumnGuesserMixin):
 
         # query
         self.query = query
-        self.flags = flags
+        self.options = options
 
         # metadata
         self.start_time = None
@@ -129,7 +129,7 @@ class ResultSet(list, ColumnGuesserMixin):
         self._dataframe = None
 
         # table printing style to any of prettytable's defined styles (currently DEFAULT, MSWORD_FRIENDLY, PLAIN_COLUMNS, RANDOM)
-        self.prettytable_style = prettytable.__dict__[self.flags.get("prettytable_style", "DEFAULT").upper()]
+        self.prettytable_style = prettytable.__dict__[self.options.get("prettytable_style", "DEFAULT").upper()]
 
         self.display_info = False
         self.suppress_result = False
@@ -137,7 +137,7 @@ class ResultSet(list, ColumnGuesserMixin):
 
     def _update(self, queryResult):
         if queryResult.returns_rows:
-            auto_limit = 0 if not self.flags.get("auto_limit") else self.flags.get("auto_limit")
+            auto_limit = 0 if not self.options.get("auto_limit") else self.options.get("auto_limit")
             if auto_limit > 0:
                 list.__init__(self, queryResult.fetchmany(size = auto_limit))
             else:
@@ -164,12 +164,12 @@ class ResultSet(list, ColumnGuesserMixin):
             # self.html_head.append(msg_html.get("head", ""))
         if not self.suppress_result:
             if self.is_chart():
-                self.show_chart(**self.flags)
+                self.show_chart(**self.options)
                 # char_html = self._getChartHtml()
                 # self.html_body.append(char_html.get("body", ""))
                 # self.html_head.append(char_html.get("head", ""))
             else:
-                self.show_table(**self.flags)
+                self.show_table(**self.options)
                 # table_html = self._getTableHtml()
                 # self.html_body.append(table_html.get("body", ""))
                 # self.html_head.append(table_html.get("head", ""))
@@ -198,7 +198,7 @@ class ResultSet(list, ColumnGuesserMixin):
             self.pretty.add_rows(self)
             result = self.pretty.get_html_string()
             result = _cell_with_spaces_pattern.sub(_nonbreaking_spaces, result)
-            display_limit = 0 if not self.flags.get("display_limit") else self.flags.get("display_limit")
+            display_limit = 0 if not self.options.get("display_limit") else self.options.get("display_limit")
             if display_limit > 0 and len(self) > display_limit:
                 result = '%s\n<span style="font-style:italic;text-align:center;">%d rows, truncated to display_limit of %d</span>' % (
                     result, len(self), display_limit)
@@ -208,16 +208,16 @@ class ResultSet(list, ColumnGuesserMixin):
 
     def show_table(self, **kwargs):
         "display the table"
-        flags = {**self.flags, **kwargs}
-        if flags.get("table_package","").upper() == "PANDAS":
+        options = {**self.options, **kwargs}
+        if options.get("table_package","").upper() == "PANDAS":
             t = self.to_dataframe()._repr_html_()
             html = Display.toHtml(body = t)
         else:
             t = self._getTableHtml()
             html = Display.toHtml(**t)
-        if flags.get("window") and not flags.get("botton_text"):
-            flags["botton_text"] = 'popup ' + 'table'            + ((' - ' + self.title) if self.title else '') + ' '
-        Display.show(html, **flags)
+        if options.get("window") and not options.get("botton_text"):
+            options["botton_text"] = 'popup ' + 'table'            + ((' - ' + self.title) if self.title else '') + ' '
+        Display.show(html, **options)
         return None
 
     def popup_table(self, **kwargs):
@@ -284,14 +284,14 @@ class ResultSet(list, ColumnGuesserMixin):
 
     def show_chart(self, **kwargs):
         "display the chart that was specified in the query"
-        flags = {**self.flags, **kwargs}
-        window_mode = flags is not None and flags.get("window")
-        if window_mode and not flags.get("botton_text"):
-            flags["botton_text"] = 'popup ' + self.visualization + ((' - ' + self.title) if self.title else '') + ' '
+        options = {**self.options, **kwargs}
+        window_mode = options is not None and options.get("window")
+        if window_mode and not options.get("botton_text"):
+            options["botton_text"] = 'popup ' + self.visualization + ((' - ' + self.title) if self.title else '') + ' '
         c = self._getChartHtml(window_mode)
         if c is not None:
             html = Display.toHtml(**c)
-            Display.show(html, **flags)
+            Display.show(html, **options)
             return None
         else:
             return self.show_table(**kwargs)
@@ -361,8 +361,8 @@ class ResultSet(list, ColumnGuesserMixin):
             figure_or_data = self._render_scatterchart_plotly(" ", self.title)
 
         if figure_or_data is not None:
-            head = '<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>' if window_mode and not self.flags.get("plotly_fs_includejs", False) else ""
-            body = plotly.offline.plot(figure_or_data, include_plotlyjs= window_mode and self.flags.get("plotly_fs_includejs", False), output_type='div')
+            head = '<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>' if window_mode and not self.options.get("plotly_fs_includejs", False) else ""
+            body = plotly.offline.plot(figure_or_data, include_plotlyjs= window_mode and self.options.get("plotly_fs_includejs", False), output_type='div')
             return {"body" : body, "head" : head}
         return None
 
@@ -1053,10 +1053,10 @@ class PrettyTable(prettytable.PrettyTable):
         return super(PrettyTable, self).__init__(*args,  **kwargs)
 
     def add_rows(self, data):
-        if self.row_count and (data.flags.get("display_limit") == self.display_limit):
+        if self.row_count and (data.options.get("display_limit") == self.display_limit):
             return  # correct number of rows already present
         self.clear_rows()
-        self.display_limit = data.flags.get("display_limit")
+        self.display_limit = data.options.get("display_limit")
         if self.display_limit == 0:
             self.display_limit = None  # TODO: remove this to make 0 really 0
         if self.display_limit in (None, 0):

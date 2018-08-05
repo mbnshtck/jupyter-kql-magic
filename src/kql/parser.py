@@ -8,14 +8,14 @@ class Parser(object):
 
     @staticmethod
     def parse(cell, config):
-        """Separate input into (connection info, KQL statements, flags)"""
+        """Separate input into (connection info, KQL statements, options)"""
 
         parsed_queries = []
         # split to max 2 parts. First part, parts[0], is the first string.
         parts = [part.strip() for part in cell.split(None, 1)]
         # print(parts)
         if not parts:
-            parsed_queries.append({'connection': '', 'kql': '', 'flags': {}})
+            parsed_queries.append({'connection': '', 'kql': '', 'options': {}})
             return parsed_queries
 
 
@@ -36,12 +36,12 @@ class Parser(object):
             parser = CP.ConfigParser()
 
             # parse to get flag, for the case that the file nema is specified
-            kql, flags = Parser._parse_kql_flags(code, config)
-            # print( "filename: {}".format(flags.get("dsn_filename")))
-            # with open(flags.get("dsn_filename"), "r") as text_file:
+            kql, options = Parser._parse_kql_options(code, config)
+            # print( "filename: {}".format(options.get("dsn_filename")))
+            # with open(options.get("dsn_filename"), "r") as text_file:
             #     print ("file.content: {} ".format(text_file.read()))
 
-            parser.read(flags.get("dsn_filename", config.dsn_filename))
+            parser.read(options.get("dsn_filename", config.dsn_filename))
             cfg_dict = dict(parser.items(section))
             cfg_dict_lower = dict()
             # for k,v in cfg_dict:
@@ -99,22 +99,22 @@ class Parser(object):
             queries.append('')
 
         #
-        # parse code to kql and flags
+        # parse code to kql and options
         #
         for query in queries:
-            kql, flags = Parser._parse_kql_flags(query.strip(), config)
+            kql, options = Parser._parse_kql_options(query.strip(), config)
             if suppress_results:
-                flags['suppress_results'] = True
-            parsed_queries.append({'connection': connection.strip(), 'kql': kql, 'flags': flags})
+                options['suppress_results'] = True
+            parsed_queries.append({'connection': connection.strip(), 'kql': kql, 'options': options})
 
         return parsed_queries
 
 
     @staticmethod
-    def _parse_kql_flags(code, config):
+    def _parse_kql_options(code, config):
         words = code.split()
-        flags = {}
-        flags_options = {
+        options = {}
+        options_table = {
                   'ad' : {"abbreviation" : "auto_dataframe"},
                   'auto_dataframe' : {"flag" : "auto_dataframe", "type" : "bool", "config" : "config.auto_dataframe"},
 
@@ -127,8 +127,8 @@ class Parser(object):
                   'scl': {"abbreviation" : "show_conn_list"},
                   'show_conn_list': {"flag" : "show_conn_list", "type" : "bool", "config" : "config.show_conn_list"},
 
-                  'tc' : {"abbreviation" : "to_column_local_vars"},
-                  'to_column_local_vars' : {"flag" : "to_column_local_vars", "type" : "bool", "config" : "config.to_column_local_vars"},
+                  'c2lv' : {"abbreviation" : "columns_to_local_vars"},
+                  'columns_to_local_vars' : {"flag" : "columns_to_local_vars", "type" : "bool", "config" : "config.columns_to_local_vars"},
 
                   'sqt' : {"abbreviation" : "show_query_time"},
                   'show_query_time' : {"flag" : "show_query_time", "type" : "bool", "config" : "config.show_query_time"},
@@ -178,17 +178,17 @@ class Parser(object):
                   'version': {"flag" : "version", "type" : "bool", "init" : "False"},
                   }
 
-        for value in flags_options.values():
+        for value in options_table.values():
             if value.get("config"):
-                flags[value.get("flag")] = eval(value.get("config"))
+                options[value.get("flag")] = eval(value.get("config"))
             elif value.get("init"):
-                flags[value.get("flag")] = eval(value.get("init"))
+                options[value.get("flag")] = eval(value.get("init"))
 
         int_options = {}
         str_options = {}
 
         if not words:
-            return ('', flags)
+            return ('', options)
         num_words = len(words)
         trimmed_kql = code
         first_word = 0
@@ -205,14 +205,14 @@ class Parser(object):
                     bool_value = False
                     word = word[1:]
                     trimmed_kql = trimmed_kql[trimmed_kql.find('!')+1:]
-                if word in flags_options.keys():
-                    obj = flags_options.get(word)
+                if word in options_table.keys():
+                    obj = options_table.get(word)
                     if obj.get("abbreviation"):
-                        obj = flags_options.get(obj.get("abbreviation"))
+                        obj = options_table.get(obj.get("abbreviation"))
                     type = obj.get("type")
                     key = obj.get("flag")
                     if type == "bool":
-                        flags[key] = bool_value
+                        options[key] = bool_value
                         trimmed_kql = trimmed_kql[trimmed_kql.find(word)+len(word):]
                     state = type
                 else:
@@ -222,7 +222,7 @@ class Parser(object):
                     raise
                 try:
                     trimmed_kql = trimmed_kql[trimmed_kql.find(word)+len(word):]
-                    flags[key] = int(word)
+                    options[key] = int(word)
                 except ValueError as e:
                     Display.showDangerMessage(str(e))
                 state = "bool"
@@ -230,20 +230,20 @@ class Parser(object):
                 trimmed_kql = trimmed_kql[trimmed_kql.find(word)+len(word):]
                 if not bool_value:
                     word = "!" + word
-                flags[key] = word
+                options[key] = word
                 state = "bool"
         if state != "bool":
-            raise
+            raise ValueError('bad options syntax')
 
         if num_words - first_word >= 2 and words[first_word + 1] == '<<':
-            flags['result_var'] = words[first_word]
+            options['result_var'] = words[first_word]
             trimmed_kql = trimmed_kql[trimmed_kql.find('<<')+2:]
 
         if num_words - first_word > 0:
             last_word = words[-1].strip()
             if last_word.endswith(';'):
-                flags['suppress_results'] = True
+                options['suppress_results'] = True
                 trimmed_kql = trimmed_kql[:trimmed_kql.rfind(';')]
-        return (trimmed_kql.strip(), flags)
+        return (trimmed_kql.strip(), options)
 
 

@@ -111,8 +111,8 @@ leftmost column serving as key, for unique values.
     In [15]: result['richard2']
     Out[15]: (u'richard2', u'Richard II', u'History of Richard II', 1595, u'h', None, u'Moby', 22411, 628)
 
-Results can also be retrieved as an iterator of dictionaries (``result.dicts()``)
-or a single dictionary with a tuple of scalar values per key (``result.dict()``)
+Results can also be retrieved as an iterator of dictionaries (``result.dicts_iterator()``)
+or a single dictionary with a tuple of scalar values per key (``result.to_dict()``)
 
 Assignment
 ----------

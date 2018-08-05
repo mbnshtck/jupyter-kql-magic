@@ -45,7 +45,7 @@ class kqlmagic(Magics, Configurable):
     short_errors = Bool(True, config=True, help="Don't display the full traceback on KQL Programming Error. Abbreviation: se")
     display_limit = Int(None, config=True, allow_none=True, help="Automatically limit the number of rows displayed (full result set is still stored). Abbreviation: dl")
     auto_dataframe = Bool(False, config=True, help="Return Pandas dataframe instead of regular result sets. Abbreviation: ad")
-    to_column_local_vars = Bool(False, config=True, help="Return data into local variables from column names. Abbreviation: tc")
+    columns_to_local_vars = Bool(False, config=True, help="Return data into local variables from column names. Abbreviation: c2lv")
     feedback = Bool(True, config=True, help="Print number of records returned, and assigned variables. Abbreviation: f")
     show_conn_list = Bool(True, config=True, help="Print connection list, when connection not specified. Abbreviation: scl")
     dsn_filename = Unicode('odbc.ini', config=True, help="Path to DSN file. "
@@ -226,14 +226,14 @@ class kqlmagic(Magics, Configurable):
             # print('NOTEBOOK_URL = {0} '.format(notebook_url))
 
         query = parsed['kql'].strip()
-        flags = parsed['flags']
-        suppress_results = flags.get('suppress_results', False) and flags.get('enable_suppress_result', self.enable_suppress_result)
+        options = parsed['options']
+        suppress_results = options.get('suppress_results', False) and options.get('enable_suppress_result', self.enable_suppress_result)
         connection_string = parsed['connection']
 
-        if flags.get('version'):
+        if options.get('version'):
             print('kqlmagic version: ' + VERSION)
 
-        if flags.get('help'):
+        if options.get('help'):
             help_url = 'http://aka.ms/kdocs'
             # 'https://docs.loganalytics.io/docs/Language-Reference/Tabular-operators'
             # 'http://aka.ms/kdocs'
@@ -252,7 +252,7 @@ class kqlmagic(Magics, Configurable):
 
         # parse error
         except KqlEngineError as e:
-            if flags.get('short_errors', self.short_errors):
+            if options.get('short_errors', self.short_errors):
                 msg = Connection.tell_format(connect_str)
                 Display.showDangerMessage(str(e))
                 Display.showInfoMessage(msg)
@@ -262,7 +262,7 @@ class kqlmagic(Magics, Configurable):
 
         # parse error
         except ConnectionError as e:
-            if flags.get('short_errors', self.short_errors):
+            if options.get('short_errors', self.short_errors):
                 Display.showDangerMessage(str(e))
                 list = Connection.get_connection_list_formatted()
                 if len(list) > 0:
@@ -274,7 +274,7 @@ class kqlmagic(Magics, Configurable):
         try:
             # validate connection
             retry_with_code = False
-            if flags.get('validate_connection_string', self.validate_connection_string) and not conn.flags.get('validate_connection_string'):
+            if options.get('validate_connection_string', self.validate_connection_string) and not conn.options.get('validate_connection_string'):
                 validation_query = 'range c from 1 to 10 step 1 | count'
                 try:
                     raw_table = conn.execute(validation_query)
@@ -296,17 +296,17 @@ class kqlmagic(Magics, Configurable):
                 raw_table = conn.execute(validation_query)
                 conn.set_validation_result(True)
 
-            conn.flags['validate_connection_string'] = True
+            conn.options['validate_connection_string'] = True
 
-            if flags.get('show_schema') or (flags.get('auto_popup_schema', self.auto_popup_schema) and not conn.flags.get('auto_popup_schema')):
+            if options.get('show_schema') or (options.get('auto_popup_schema', self.auto_popup_schema) and not conn.options.get('auto_popup_schema')):
                 Database_html.show_schema(conn)
-            conn.flags['auto_popup_schema'] = True
+            conn.options['auto_popup_schema'] = True
 
             if not query:
                 #
                 # If NO  kql query, just return the current connection
                 #
-                if not connection_string and Connection.connections and flags.get('show_conn_list', self.show_conn_list) and not suppress_results:
+                if not connection_string and Connection.connections and options.get('show_conn_list', self.show_conn_list) and not suppress_results:
                     Display.showInfoMessage(Connection.get_connection_list_formatted())
                 return None
             #
@@ -323,7 +323,7 @@ class kqlmagic(Magics, Configurable):
             # model query results
             #
             if result_set is None:
-                saved_result = ResultSet(raw_table, query, flags)
+                saved_result = ResultSet(raw_table, query, options)
                 saved_result.magic = self
                 saved_result.parsed = parsed
                 saved_result.connection = conn.get_name()
@@ -331,39 +331,39 @@ class kqlmagic(Magics, Configurable):
                 saved_result = result_set
                 saved_result._update(raw_table)
 
-            if not connection_string and Connection.connections and flags.get('show_conn_list', self.show_conn_list):
+            if not connection_string and Connection.connections and options.get('show_conn_list', self.show_conn_list):
                 saved_result.conn_info = Connection.get_connection_list_formatted()
 
             saved_result.start_time = start_time
             saved_result.end_time = end_time
             saved_result.elapsed_timespan = elapsed_timespan
-            self.shell.user_ns.update({ flags.get('last_raw_result_var', self.last_raw_result_var) : saved_result })
+            self.shell.user_ns.update({ options.get('last_raw_result_var', self.last_raw_result_var) : saved_result })
 
             result = saved_result
-            if flags.get('feedback', self.feedback):
+            if options.get('feedback', self.feedback):
                 minutes, seconds = divmod(elapsed_timespan, 60)
                 saved_result.info.append('Done ({:0>2}:{:06.3f}): {} records'.format(int(minutes), seconds, saved_result.records_count))
 
             logger().debug("Results: {} x {}".format(len(saved_result), len(saved_result.columns_name)))
 
-            if flags.get('to_column_local_vars', self.to_column_local_vars):
+            if options.get('columns_to_local_vars', self.columns_to_local_vars):
                 #Instead of returning values, set variables directly in the
                 #users namespace. Variable names given by column names
 
-                if flags.get('feedback', self.feedback):
+                if options.get('feedback', self.feedback):
                     saved_result.info.append('Returning raw data to local variables [{}]'.format(', '.join(saved_result.columns_name)))
 
-                self.shell.user_ns.update(saved_result.dict())
+                self.shell.user_ns.update(saved_result.to_dict())
                 result = None
 
-            if flags.get('auto_dataframe', self.auto_dataframe):
-                if flags.get('feedback', self.feedback):
+            if options.get('auto_dataframe', self.auto_dataframe):
+                if options.get('feedback', self.feedback):
                     saved_result.info.append('Returning data converted to pandas dataframe')
                 result = saved_result.to_dataframe()
 
-            if flags.get('result_var') and result_set is None:
-                result_var = flags['result_var']
-                if flags.get('feedback', self.feedback):
+            if options.get('result_var') and result_set is None:
+                result_var = options['result_var']
+                if options.get('feedback', self.feedback):
                     saved_result.info.append('Returning data to local variable {}'.format(result_var))
                 self.shell.user_ns.update({result_var: result if result is not None else saved_result})
                 result = None
@@ -372,7 +372,7 @@ class kqlmagic(Magics, Configurable):
                 return None
 
             if not suppress_results:
-                if flags.get('auto_dataframe', self.auto_dataframe):
+                if options.get('auto_dataframe', self.auto_dataframe):
                     Display.showSuccessMessage(saved_result.info)
                 else:
                     saved_result.display_info = True
@@ -383,11 +383,11 @@ class kqlmagic(Magics, Configurable):
             return result
 
         except Exception as e:
-            if not connection_string and Connection.connections and flags.get('show_conn_list', self.show_conn_list) and not suppress_results:
+            if not connection_string and Connection.connections and options.get('show_conn_list', self.show_conn_list) and not suppress_results:
                 # display list of all connections
                 Display.showInfoMessage(Connection.get_connection_list_formatted())
 
-            if flags.get('short_errors', self.short_errors):
+            if options.get('short_errors', self.short_errors):
                 Display.showDangerMessage(e)
                 return None
             else:

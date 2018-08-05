@@ -143,15 +143,15 @@ def test_display_limit():
 query6 = "$TEST_CONNECTION_STR let T = view () { datatable(first_name:string, last_name:string, year_of_death:long)['William', 'Shakespeare', 1616, 'Bertold', 'Brecht', 1956] }; T"
 
 @with_setup(_setup, _teardown)
-def test_to_column_local_vars():
-    ip.run_line_magic('config',  "kqlmagic.to_column_local_vars = True")
+def test_columns_to_local_vars():
+    ip.run_line_magic('config',  "kqlmagic.columns_to_local_vars = True")
     result = ip.run_line_magic('kql', query6)
     print(result)
     assert result is None
     assert 'William' in ip.user_global_ns['first_name']
     assert 'Shakespeare' in ip.user_global_ns['last_name']
     assert len(ip.user_global_ns['first_name']) == 2
-    ip.run_line_magic('config',  "kqlmagic.to_column_local_vars = False")
+    ip.run_line_magic('config',  "kqlmagic.columns_to_local_vars = False")
 
 @with_setup(_setup, _teardown)
 def test_userns_not_changed():
@@ -203,7 +203,7 @@ def test_csv_to_file():
 @with_setup(_setup, _teardown)
 def test_dict():
     result = ip.run_line_magic('kql',  query6)
-    result = result.dict()
+    result = result.to_dict()
     assert isinstance(result, dict)
     assert 'first_name' in result
     assert 'last_name' in result
@@ -213,7 +213,7 @@ def test_dict():
 @with_setup(_setup, _teardown)
 def test_dicts():
     result = ip.run_line_magic('kql',  query6)
-    for row in result.dicts():
+    for row in result.dicts_iterator():
         assert isinstance(row, dict)
         assert 'first_name' in row
         assert 'last_name' in row
