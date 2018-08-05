@@ -29,19 +29,19 @@ import logging
 import uuid
 import traceback
 
-KQLMAGIC_LOGGER_NAME = 'kqlmagic-py'
+KQLMAGIC_LOGGER_NAME = 'Kqlmagic-py'
 
 def create_log_context(correlation_id=None):
     return {'correlation_id' : correlation_id or str(uuid.uuid4())}
 
 def set_logging_options(options=None):
-    '''Configure kqlmagic logger, including level and handler spec'd by python
+    '''Configure Kqlmagic logger, including level and handler spec'd by python
     logging module.
 
     Basic Usages::
-        >>>kqlmagic.set_logging_options({
+        >>>Kqlmagic.set_logging_options({
         >>>  'level': 'DEBUG'
-        >>>  'handler': logging.FileHandler('kqlmagic.log')
+        >>>  'handler': logging.FileHandler('Kqlmagic.log')
         >>>})
     '''
     if options is None:

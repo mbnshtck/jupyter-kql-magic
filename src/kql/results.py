@@ -215,14 +215,14 @@ class ResultSet(list, ColumnGuesserMixin):
         else:
             t = self._getTableHtml()
             html = Display.toHtml(**t)
-        if options.get("window") and not options.get("botton_text"):
+        if options.get("popup_window") and not options.get("botton_text"):
             options["botton_text"] = 'popup ' + 'table'            + ((' - ' + self.title) if self.title else '') + ' '
         Display.show(html, **options)
         return None
 
     def popup_table(self, **kwargs):
         "display the table"
-        return self.show_table(**{"window" : True, **kwargs})
+        return self.show_table(**{"popup_window" : True, **kwargs})
 
     # Printable pretty presentation of the object
     def __str__(self, *args, **kwargs):
@@ -285,7 +285,7 @@ class ResultSet(list, ColumnGuesserMixin):
     def show_chart(self, **kwargs):
         "display the chart that was specified in the query"
         options = {**self.options, **kwargs}
-        window_mode = options is not None and options.get("window")
+        window_mode = options is not None and options.get("popup_window")
         if window_mode and not options.get("botton_text"):
             options["botton_text"] = 'popup ' + self.visualization + ((' - ' + self.title) if self.title else '') + ' '
         c = self._getChartHtml(window_mode)
@@ -298,11 +298,11 @@ class ResultSet(list, ColumnGuesserMixin):
 
     def popup_Chart(self, **kwargs):
         "display the chart that was specified in the query"
-        return self.show_chart(**{"window" : True, **kwargs})
+        return self.show_chart(**{"popup_window" : True, **kwargs})
 
     def popup(self, **kwargs):
         "display the chart that was specified in the query"
-        return self.show_chart(**{"window" : True, **kwargs})
+        return self.show_chart(**{"popup_window" : True, **kwargs})
 
 
     def is_chart(self):

@@ -117,7 +117,7 @@ class AppinsightsResponse(object):
         # but this can be as easily called result or similar
         return AppinsightsResultIter(self.json_response['Tables'][table_id])
 
-# used in kqlMagic
+# used in Kqlmagic
 class AppinsightsError(Exception):
     """
     Represents error returned from server. Error can contain partial results of the executed query.

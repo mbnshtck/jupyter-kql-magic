@@ -53,7 +53,7 @@ class _MyAadHelper(object):
 
                 <h1 id="user_code_p"><b>""" +code["user_code"].strip()+ """</b><br></h1>
 
-                <button id='my_button', onclick="this.style.visibility='hidden';kqlMagicCodeAuthFunction()">Copy the above code, and Click to open authentication window</button>
+                <button id='my_button', onclick="this.style.visibility='hidden';kqlMagicCodeAuthFunction()">Copy code, and click to authenticate</button>
 
                 <script>
                 var kqlMagicUserCodeAuthWindow = null

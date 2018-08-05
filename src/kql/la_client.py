@@ -117,7 +117,7 @@ class LoganalyticsResponse(object):
         # but this can be as easily called result or similar
         return LoganalyticsResultIter(self.json_response['Tables'][table_id])
 
-# used in kqlMagic
+# used in Kqlmagic
 class LoganalyticsError(Exception):
     """
     Represents error returned from server. Error can contain partial results of the executed query.

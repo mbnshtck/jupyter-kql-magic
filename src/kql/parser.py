@@ -139,8 +139,8 @@ class Parser(object):
                   'pfi': {"abbreviation" : "plotly_fs_includejs"},
                   'plotly_fs_includejs': {"flag" : "plotly_fs_includejs", "type" : "bool", "config" : "config.plotly_fs_includejs"},
 
-                  'win': {"abbreviation" : "window"},
-                  'window': {"flag" : "window", "type" : "bool", "init" : "False"},
+                  'pw': {"abbreviation" : "popup_window"},
+                  'popup_window': {"flag" : "popup_window", "type" : "bool", "init" : "False"},
 
                   'al': {"abbreviation" : "auto_limit"},
                   'auto_limit': {"flag" : "auto_limit", "type" : "int", "config" : "config.auto_limit"},

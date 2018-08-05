@@ -21,7 +21,7 @@ class Display(object):
     @staticmethod
     def show(html_str, **kwargs):
         if len(html_str) > 0:
-            if kwargs is not None and kwargs.get('window', False):
+            if kwargs is not None and kwargs.get('popup_window', False):
                 file_name = Display._get_name(**kwargs)
                 url = Display._html_to_url(html_str, file_name, **kwargs)
                 Display.show_window(file_name, url, kwargs.get('botton_text'), **kwargs)
@@ -65,7 +65,7 @@ class Display(object):
             <html>
             <body>
 
-            <button onclick="this.style.visibility='hidden';"""+windowFunctionName+"""Function()">Click to open window</button>
+            <button onclick="this.style.visibility='hidden';"""+windowFunctionName+"""Function()">popup window</button>
 
             <script>
 
@@ -93,7 +93,7 @@ class Display(object):
 
     @staticmethod
     def _get_window_html(window_name, url, button_text = None, **kwargs):
-        button_text = button_text or 'Click to open window'
+        button_text = button_text or 'popup window'
         window_params = "fullscreen=no,directories=no,location=no,menubar=no,resizable=yes,scrollbars=yes,status=no,titlebar=no,toolbar=no,"
         html_str = """<!DOCTYPE html>
             <html><body>

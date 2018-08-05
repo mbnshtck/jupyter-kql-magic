@@ -118,6 +118,6 @@ Sharing notebook via gist
    
 
 !pip install git+git://github.com/mbnshtck/jupyter-kql-magic.git
-pip uninstall -y kqlmagic 
+pip uninstall -y Kqlmagic 
 
 

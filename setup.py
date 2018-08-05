@@ -1,8 +1,8 @@
-"""Setup for kqlmagic"""
+"""Setup for Kqlmagic"""
 
-DESCRIPTION         = "kqlmagic: KQL (Kusto Query Language) execution via Jupyter magic"
+DESCRIPTION         = "Kqlmagic: KQL (Kusto Query Language) execution via Jupyter magic"
 
-NAME                = "kqlmagic"
+NAME                = "Kqlmagic"
 
 AUTHOR              = 'Michael Binshtock'
 

@@ -42,7 +42,7 @@
     <Compile Include="src\kql\la_client.py" />
     <Compile Include="src\kql\la_engine.py" />
     <Compile Include="src\kql\log.py" />
-    <Compile Include="src\kql\kqlmagic.py" />
+    <Compile Include="src\kql\kql_magic.py" />
     <Compile Include="src\kql\my_aad_helper.py" />
     <Compile Include="src\kql\parser.py" />
     <Compile Include="src\kql\results.py" />
