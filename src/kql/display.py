@@ -70,7 +70,6 @@ class Display(object):
             <script>
 
             function """+windowFunctionName+"""Function() {
-                IPython.notebook.kernel.execute("KQL_BUTTON_CLICKED = True");
                 var w = screen.width / 2;
                 var h = screen.height / 2;
                 params = 'width='+w+',height='+h;
@@ -98,15 +97,15 @@ class Display(object):
         html_str = """<!DOCTYPE html>
             <html><body>
 
-            <button onclick="this.style.visibility='hidden';kqlMagicLaunchWindowFunction('"""+url+"""')">""" +button_text+ """</button>
+            <button onclick="this.style.visibility='hidden';kqlMagicLaunchWindowFunction('"""+url+"""','""" +window_params+ """','""" +window_name+ """')">""" +button_text+ """</button>
 
             <script>
-            function kqlMagicLaunchWindowFunction(url) {
+            function kqlMagicLaunchWindowFunction(url, window_params, window_name) {
                 window.focus();
                 var w = screen.width / 2;
                 var h = screen.height / 2;
                 params = 'width='+w+',height='+h;
-                kqlMagic_""" +window_name+ """ = window.open(url, '""" +window_name+ """', '""" +window_params+ """'+params);
+                kqlMagic_""" +window_name+ """ = window.open(url, window_name, window_params + params);
             }
             </script>
 

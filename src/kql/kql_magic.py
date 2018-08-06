@@ -232,7 +232,7 @@ class Kqlmagic(Magics, Configurable):
         if options.get('version'):
             print('Kqlmagic version: ' + VERSION)
 
-        if options.get('help'):
+        if options.get('popup_help'):
             help_url = 'http://aka.ms/kdocs'
             # 'https://docs.loganalytics.io/docs/Language-Reference/Tabular-operators'
             # 'http://aka.ms/kdocs'
@@ -241,7 +241,8 @@ class Kqlmagic(Magics, Configurable):
             # f = requests.get(help_url)
             # html = f.text.replace('width=device-width','width=500')
             # Display.show(html, **{"popup_window" : True, 'name': 'KustoQueryLanguage'})
-            Display.show_window('KustoQueryLanguage', help_url)
+            button_text = 'popup kql help '
+            Display.show_window('KustoQueryLanguage', help_url, button_text)
 
         try:
             #
@@ -297,8 +298,8 @@ class Kqlmagic(Magics, Configurable):
 
             conn.options['validate_connection_string'] = True
 
-            if options.get('show_schema') or (options.get('auto_popup_schema', self.auto_popup_schema) and not conn.options.get('auto_popup_schema')):
-                Database_html.show_schema(conn)
+            if options.get('popup_schema') or (options.get('auto_popup_schema', self.auto_popup_schema) and not conn.options.get('auto_popup_schema')):
+                Database_html.popup_schema(conn)
             conn.options['auto_popup_schema'] = True
 
             if not query:

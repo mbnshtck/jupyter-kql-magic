@@ -169,11 +169,11 @@ class Parser(object):
                   'aps': {"abbreviation" : "auto_popup_schema"},
                   'auto_popup_schema': {"flag" : "auto_popup_schema", "type" : "bool", "config" : "config.auto_popup_schema"},
 
-                  'h': {"abbreviation" : "help"},
-                  'help': {"flag" : "help", "type" : "bool", "init" : "False"},
+                  'ph': {"abbreviation" : "popup_help"},
+                  'popup_help': {"flag" : "popup_help", "type" : "bool", "init" : "False"},
 
-                  'ss': {"abbreviation" : "show_schema"},
-                  'show_schema': {"flag" : "show_schema", "type" : "bool", "init" : "False"},
+                  'ps': {"abbreviation" : "popup_schema"},
+                  'popup_schema': {"flag" : "popup_schema", "type" : "bool", "init" : "False"},
 
                   'version': {"flag" : "version", "type" : "bool", "init" : "False"},
                   }

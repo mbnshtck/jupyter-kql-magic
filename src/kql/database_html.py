@@ -146,7 +146,7 @@ class Database_html(object):
         return """<a href="#" class="list-group-item">""" +item+ """</a>"""
 
     @staticmethod
-    def show_schema(conn):
+    def popup_schema(conn):
         if isinstance(conn, KustoEngine) or isinstance(conn, AppinsightsEngine):
             database_name = conn.get_database()
             conn_name = conn.get_name()

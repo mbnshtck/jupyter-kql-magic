@@ -43,21 +43,34 @@ class _MyAadHelper(object):
         else:
             code = self.adal_context.acquire_user_code(self.kusto_cluster, self.client_id)
 
-            # Display.showInfoMessage(code['message'])
-
-            # <button onclick="this.style.visibility='hidden';document.getElementById('user_code_p').innerHTML = '';myFunction()">Copy the above code, and Click to open authentication window</button>
 
             url = code['verification_url']
+            device_code = code["user_code"].strip()
+
             html_str = """<!DOCTYPE html>
                 <html><body>
 
-                <h1 id="user_code_p"><b>""" +code["user_code"].strip()+ """</b><br></h1>
+                <!-- h1 id="user_code_p"><b>""" +device_code+ """</b><br></h1-->
 
-                <button id='my_button', onclick="this.style.visibility='hidden';kqlMagicCodeAuthFunction()">Copy code, and click to authenticate</button>
+                <input  id="kqlMagicCodeAuthInput" type="text" readonly style="font-weight: bold; border: none;" size = '""" +str(len(device_code))+ """' value='""" +device_code+ """'>
+
+                <button id='kqlMagicCodeAuth_button', onclick="this.style.visibility='hidden';kqlMagicCodeAuthFunction()">Copy code to clipboard and authenticate</button>
 
                 <script>
                 var kqlMagicUserCodeAuthWindow = null
                 function kqlMagicCodeAuthFunction() {
+                    /* Get the text field */
+                    var copyText = document.getElementById("kqlMagicCodeAuthInput");
+
+                    /* Select the text field */
+                    copyText.select();
+
+                    /* Copy the text inside the text field */
+                    document.execCommand("copy");
+
+                    /* Alert the copied text */
+                    // alert("Copied the text: " + copyText.value);
+
                     var w = screen.width / 2;
                     var h = screen.height / 2;
                     params = 'width='+w+',height='+h
