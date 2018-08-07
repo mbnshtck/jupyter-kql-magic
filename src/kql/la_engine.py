@@ -1,8 +1,6 @@
-import os.path
 import re
 from kql.kql_engine import KqlEngine, KqlEngineError
 from kql.la_client import LoganalyticsClient
-import requests
 import getpass
 
 class LoganalyticsEngine(KqlEngine):

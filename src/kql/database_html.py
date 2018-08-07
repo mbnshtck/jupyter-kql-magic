@@ -1,8 +1,3 @@
-import os.path
-import re
-import uuid
-from IPython.core.display import display, HTML
-from IPython.core.magics.display import Javascript
 from kql.display  import Display
 from kql.kusto_engine import KustoEngine
 from kql.ai_engine import AppinsightsEngine

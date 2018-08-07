@@ -1,6 +1,5 @@
 import os
 import time
-import re
 import logging
 # to avoid "No handler found" warnings.
 from kql.log  import KQLMAGIC_LOGGER_NAME

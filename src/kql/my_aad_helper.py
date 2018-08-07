@@ -6,7 +6,6 @@ from datetime import timedelta, datetime
 import dateutil.parser
 from adal import AuthenticationContext
 from kql.display  import Display
-import getpass
 
 
 

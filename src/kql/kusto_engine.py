@@ -1,7 +1,5 @@
-import os.path
 import re
 from azure.kusto.data import KustoClient
-import requests
 import getpass
 
 from kql.kql_engine import KqlEngine, KqlEngineError

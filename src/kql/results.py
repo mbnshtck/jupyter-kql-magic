@@ -5,7 +5,6 @@ import six
 import codecs
 import os.path
 import re
-import uuid
 import prettytable
 from kql.column_guesser import ColumnGuesserMixin
 

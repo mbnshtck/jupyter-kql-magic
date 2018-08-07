@@ -1,6 +1,4 @@
-import os.path
 import json
-import requests
 
 class KqlRow(object):
     def __init__(self, row, col_num):

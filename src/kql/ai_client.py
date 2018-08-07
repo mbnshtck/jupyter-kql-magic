@@ -4,7 +4,6 @@ import re
 import adal 
 import dateutil.parser
 import requests
-import webbrowser
 
 # Regex for TimeSpan
 TIMESPAN_PATTERN = re.compile(r'((?P<d>[0-9]*).)?(?P<h>[0-9]{2}):(?P<m>[0-9]{2}):(?P<s>[0-9]{2})(.(?P<ms>[0-9]*))?')
@@ -283,7 +282,7 @@ class AppinsightsClient(object):
         else:
             code = self.adal_context.acquire_user_code(self.appinsights_cluster, self.client_id)
             # print(code['message'])
-            webbrowser.open(code['verification_url'])
+            # webbrowser.open(code['verification_url'])
             token_response = self.adal_context.acquire_token_with_device_code(self.appinsights_cluster, code, self.client_id)
 
         return token_response['accessToken']

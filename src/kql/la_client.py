@@ -283,7 +283,7 @@ class LoganalyticsClient(object):
         else:
             code = self.adal_context.acquire_user_code(self.loganalytics_cluster, self.client_id)
             # print(code['message'])
-            webbrowser.open(code['verification_url'])
+            # webbrowser.open(code['verification_url'])
             token_response = self.adal_context.acquire_token_with_device_code(self.loganalytics_cluster, code, self.client_id)
 
         return token_response['accessToken']
