@@ -229,7 +229,7 @@ class Kqlmagic(Magics, Configurable):
                         Display.showfiles_base_url = '/'.join(parts) 
                         # assumes it is at root
             else:
-                print('missing NOTEBOOK_URL !!!, usre relative reference')
+                print('popup may not work !!!')
                 Display.showfiles_base_url = ''
                 # raise ConnectionError('missing NOTEBOOK_URL') 
             Display.showfiles_base_url += "/" + self.showfiles_folder_name + "/"
