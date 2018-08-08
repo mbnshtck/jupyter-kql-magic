@@ -93,6 +93,7 @@ class _MyAadHelper(object):
                         }
                         // clear output cell 
                         Jupyter.notebook.clear_output(Jupyter.notebook.get_selected_index())
+                        // move to next cell
 
                     </script></body></html>"""
 

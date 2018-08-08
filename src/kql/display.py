@@ -15,38 +15,35 @@ class Display(object):
     warning_style = {'color': '#8a6d3b', 'background-color': '#fcf8e3', 'border-color': '#faebcc' }
     showfiles_base_url = None
     showfiles_base_path = None
+    showfiles_folder_name = None
+    notebooks_host = None
 
     @staticmethod
     def show(html_str, **kwargs):
         if len(html_str) > 0:
             if kwargs is not None and kwargs.get('popup_window', False):
                 file_name = Display._get_name(**kwargs)
-                url = Display._html_to_url(html_str, file_name, **kwargs)
-                Display.show_window(file_name, url, kwargs.get('botton_text'), **kwargs)
+                file_path = Display._html_to_file_path(html_str, file_name, **kwargs)
+                Display.show_window(file_name, file_path, kwargs.get('botton_text'), **kwargs)
             else:
                 # print(HTML(html_str)._repr_html_())
                 display(HTML(html_str))
 
     @staticmethod
-    def show_window(window_name, url, button_text = None, **kwargs):
-        html_str = Display._get_window_html(window_name, url, button_text, **kwargs)
+    def show_window(window_name, file_path, button_text = None, **kwargs):
+        html_str = Display._get_window_html(window_name,file_path, button_text, **kwargs)
         display(HTML(html_str))
 
     @staticmethod
-    def show_windows(windows, **kwargs):
-        # display(Javascript(script))
-        html_str = Display._get_windows_html(windows, **kwargs)
-        display(HTML(html_str))
-
-    @staticmethod
-    def _html_to_url(html_str, file_name, **kwargs):
-        fname = Display.showfiles_base_path +file_name+ ".html"
-        text_file = open(fname, "w")
+    def _html_to_file_path(html_str, file_name, **kwargs):
+        full_file_name = Display.showfiles_base_path +file_name+ ".html"
+        text_file = open(full_file_name, "w")
         text_file.write(html_str)
         text_file.close()
-        get_ipython().tempfiles.append(fname)
-
-        return Display.showfiles_base_url +file_name+ '.html' 
+        # ipython will delete file at shutdown or by restart
+        get_ipython().tempfiles.append(full_file_name)
+        file_path = Display.showfiles_folder_name + '/' +file_name+ ".html"
+        return file_path
 
     @staticmethod
     def _get_name(**kwargs):
@@ -57,51 +54,47 @@ class Display(object):
         return name
 
     @staticmethod
-    def _get_windows_html(windows, **kwargs):
-        windowFunctionName = "kqlMagicLaunchWindowFunction"
-        if kwargs is not None and kwargs.get('windowFunctionName'):
-            windowFunctionName = kwargs.get('windowFunctionName')
-
-        html_part1 = """<!DOCTYPE html>
-            <html>
-            <body>
-
-            <button onclick="this.style.visibility='hidden';"""+windowFunctionName+"""Function()">popup window</button>
-
-            <script>
-
-            function """+windowFunctionName+"""Function() {
-                var w = screen.width / 2;
-                var h = screen.height / 2;
-                params = 'width='+w+',height='+h;
-            """
-
-        html_part3 = """
-            }
-            </script>
-
-            </body>
-            </html>"""
-        html_part2 = ''
-        for window_name in windows.keys():
-            url = windows.get(window_name)
-            window_params = "fullscreen=no,directories=no,location=no,menubar=no,resizable=yes,scrollbars=yes,status=no,titlebar=no,toolbar=no,"
-            html_part2 += 'kqlMagic_' +window_name+ """ = window.open('""" +url+ """', '""" +window_name+ """', '""" +window_params+ """'+params);"""
-        result =  html_part1 + html_part2 + html_part3
-        # print(result)
-        return result
-
-    @staticmethod
-    def _get_window_html(window_name, url, button_text = None, **kwargs):
+    def _get_window_html(window_name, file_path, button_text = None, **kwargs):
+        notebooks_host = Display.notebooks_host or ''
         button_text = button_text or 'popup window'
         window_params = "fullscreen=no,directories=no,location=no,menubar=no,resizable=yes,scrollbars=yes,status=no,titlebar=no,toolbar=no,"
         html_str = """<!DOCTYPE html>
             <html><body>
 
-            <button onclick="this.style.visibility='hidden';kqlMagicLaunchWindowFunction('"""+url+"""','""" +window_params+ """','""" +window_name+ """')">""" +button_text+ """</button>
+            <button onclick="this.style.visibility='hidden';kqlMagicLaunchWindowFunction('"""+file_path+"""','""" +window_params+ """','""" +window_name+ """','"""+notebooks_host+"""')">""" +button_text+ """</button>
 
             <script>
-            function kqlMagicLaunchWindowFunction(url, window_params, window_name) {
+
+            function kqlMagicLaunchWindowFunction(file_path, window_params, window_name, notebooks_host) {
+                var url;
+                if (file_path.startsWith('http')) {
+                    url = file_path;
+                } else {
+                    var base_url = '';
+
+                    var azure_host = (notebooks_host == null || notebooks_host.length == 0) ? 'https://notebooks.azure.com' : notebooks_host;
+                    var start = azure_host.search('//');
+                    var azure_host_suffix = '.' + azure_host.substring(start+2);
+
+                    var loc = String(window.location);
+                    var end = loc.search(azure_host_suffix);
+                    start = loc.search('//');
+                    if (start > 0 && end > 0) {
+                        var parts = loc.substring(start+2, end).split('-');
+                        if (parts.length == 2) {
+                            var library = parts[0];
+                            var user = parts[1];
+                            base_url = azure_host + '/api/user/' +user+ '/library/' +library+ '/html';
+                        }
+                    }
+                    if (base_url.length == 0) {
+                        var parts = loc.split('/');
+                        parts.pop();
+                        base_url = parts.join('/');
+                    }
+                    url = base_url + '/' + file_path;
+                }
+
                 window.focus();
                 var w = screen.width / 2;
                 var h = screen.height / 2;

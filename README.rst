@@ -1,5 +1,7 @@
 ===========
-jupyter-kql-magic
+jupyter-Kqlmagic
+
+Extension (Magic) to Jupyter notebook and Jupyter lab, that enable notebook experience working with Kusto, ApplicationInsights, and LogAnalytics data. 
 ===========
 
 :Author: Michael Binshtock, mbnshtck@gmail.com
