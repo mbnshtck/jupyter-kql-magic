@@ -16,7 +16,7 @@ class Help_html(object):
 
     @staticmethod
     def flush(window_location, **kwargs):
-        if window_location.startswith("http://localhost") or notebook_url.startswith("https://localhost"):
+        if window_location.startswith("http://localhost") or window_location.startswith("https://localhost"):
             parts = window_location.split('/')
             parts.pop()
             Help_html.showfiles_base_url = '/'.join(parts) 
