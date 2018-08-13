@@ -16,7 +16,7 @@ from traitlets import Bool, Int, Unicode, Enum
 
 from kql.version import VERSION
 from kql.connection import Connection
-from azure.kusto.data import KustoError
+from azure.kusto.data.exceptions import KustoError
 from kql.ai_client import AppinsightsError
 from kql.la_client import LoganalyticsError
 
@@ -28,6 +28,7 @@ from kql.display  import Display
 from kql.database_html  import Database_html
 from kql.help_html import Help_html
 from kql.kusto_engine import KustoEngine
+from kql.kql_engine import KqlEngineError
 
 
 
@@ -50,7 +51,7 @@ class Kqlmagic(Magics, Configurable):
                            "When the first argument is of the form [section], "
                            "a kql connection string is formed from the "
                            "matching section in the DSN file. Abbreviation: dl")
-    plot_package = Enum(['matplotlib', 'plotly'], 'matplotlib', config=True, help="Set the plot package. Abbreviation: pp")
+    plot_package = Enum(['matplotlib', 'plotly'], 'plotly', config=True, help="Set the plot package. Abbreviation: pp")
     table_package = Enum(['prettytable', 'pandas', 'plotly', 'qgrid'], 'prettytable', config=True, help="Set the table display package. Abbreviation: tp")
     last_raw_result_var = Unicode('_kql_raw_result_', config=True, help="Set the name of the variable that will contain last raw result. Abbreviation: var")
     enable_suppress_result = Bool(True, config=True, help="Suppress result when magic ends with a semicolon ;. Abbreviation: esr")

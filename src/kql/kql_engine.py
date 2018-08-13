@@ -39,11 +39,12 @@ class KqlEngine(object):
         else:
             raise KqlEngineError("Database and/or cluster is not defined.")
 
-    def execute(self, code, user_namespace = None):
-        if code.strip():
+    def execute(self, query, user_namespace = None):
+        if query.strip():
             if not self.client:
                 raise KqlEngineError("Client is not defined.")
-            response = self.client.execute(self.get_database(), code, False)
+            response = self.client.execute(self.get_database(), query, accept_partial_results = False, timeout = None, get_raw_response =True)
+            # print(response.json_response)
             return KqlResponse(response)
 
 

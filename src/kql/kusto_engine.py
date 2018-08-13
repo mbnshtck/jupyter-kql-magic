@@ -1,9 +1,8 @@
 import re
-from azure.kusto.data import KustoClient
 import getpass
 
 from kql.kql_engine import KqlEngine, KqlEngineError
-from kql.my_aad_helper import _MyAadHelper
+from kql.kusto_client import Kusto_Client
 
 
 
@@ -137,21 +136,12 @@ class KustoEngine(KqlEngine):
 
 
     def _set_client(self):
-            self.client = KustoClient(kusto_cluster=self.cluster_url_template.format(self._parsed_conn.get('cluster')), 
+            self.client = Kusto_Client(kusto_cluster=self.cluster_url_template.format(self._parsed_conn.get('cluster')), 
                                       client_id=self._parsed_conn.get('clientid'), 
                                       client_secret=self._parsed_conn.get('clientsecret'), 
                                       username=self._parsed_conn.get('username'), 
                                       password=self._parsed_conn.get('password'),
                                       authority=self._parsed_conn.get('tenant'))
-            # patch that replace the authetication helper
-            my_aad_helper = _MyAadHelper(kusto_cluster=self.cluster_url_template.format(self._parsed_conn.get('cluster')), 
-                                      client_id=self._parsed_conn.get('clientid'), 
-                                      client_secret=self._parsed_conn.get('clientsecret'), 
-                                      username=self._parsed_conn.get('username'), 
-                                      password=self._parsed_conn.get('password'),
-                                      authority=self._parsed_conn.get('tenant'))
-            self.client._aad_helper = my_aad_helper
-
     def get_client(self):
         return self.client
 

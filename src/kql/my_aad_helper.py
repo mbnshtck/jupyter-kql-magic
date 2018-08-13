@@ -5,13 +5,18 @@ from datetime import timedelta, datetime
 # import webbrowser
 import dateutil.parser
 from adal import AuthenticationContext
+from adal.constants import TokenResponseFields, OAuth2DeviceCodeResponseParameters, AADConstants
 from kql.display  import Display
 
 
 
 class _MyAadHelper(object):
     def __init__(self, kusto_cluster, client_id=None, client_secret=None, username=None, password=None, authority=None):
-        self.adal_context = AuthenticationContext('https://login.windows.net/{0}'.format(authority or 'microsoft.com'))
+        self.adal_context = AuthenticationContext(
+            "https://{0}/{1}".format(
+                AADConstants.WORLD_WIDE_AUTHORITY, authority or "microsoft.com"
+            )
+        )
         self.kusto_cluster = kusto_cluster
         self.client_id = client_id or "db662dc1-0cfe-4e1c-a843-19a68e65be58"
         self.client_secret = client_secret
@@ -24,9 +29,16 @@ class _MyAadHelper(object):
         token_response = self.adal_context.acquire_token(self.kusto_cluster, self.username, self.client_id)
 
         if token_response is not None:
-            expiration_date = dateutil.parser.parse(token_response['expiresOn'])
-            if expiration_date > datetime.utcnow() + timedelta(minutes=5):
-                return token_response['accessToken']
+            expiration_date = dateutil.parser.parse(token_response[TokenResponseFields.EXPIRES_ON])
+            if expiration_date > datetime.now() + timedelta(minutes=5):
+                return self._get_header(token_response)
+
+            elif TokenResponseFields.REFRESH_TOKEN in token_response:
+                token_response = self.adal_context.acquire_token_with_refresh_token(
+                    token_response[TokenResponseFields.REFRESH_TOKEN], self.client_id, self.kusto_cluster
+                )
+                if token_response is not None:
+                    return self._get_header(token_response)
 
         if self.client_secret is not None and self.client_id is not None:
             token_response = self.adal_context.acquire_token_with_client_credentials(
@@ -43,8 +55,8 @@ class _MyAadHelper(object):
             code = self.adal_context.acquire_user_code(self.kusto_cluster, self.client_id)
 
 
-            url = code['verification_url']
-            device_code = code["user_code"].strip()
+            url = code[OAuth2DeviceCodeResponseParameters.VERIFICATION_URL]
+            device_code = code[OAuth2DeviceCodeResponseParameters.USER_CODE].strip()
 
             html_str = """<!DOCTYPE html>
                 <html><body>
@@ -74,6 +86,8 @@ class _MyAadHelper(object):
                     var h = screen.height / 2;
                     params = 'width='+w+',height='+h
                     kqlMagicUserCodeAuthWindow = window.open('""" +url+ """', 'kqlMagicUserCodeAuthWindow', params);
+
+                    // TODO: save selected cell index, so that the clear will be done on the lince cell
                 }
                 </script>
 
@@ -91,13 +105,20 @@ class _MyAadHelper(object):
                         if (kqlMagicUserCodeAuthWindow && kqlMagicUserCodeAuthWindow.opener != null && !kqlMagicUserCodeAuthWindow.closed) {
                             kqlMagicUserCodeAuthWindow.close()
                         }
-                        // clear output cell 
+                        // TODO: make sure, you clear the right cell. BTW, not sure it is a must to do any clearing
+
+                        // clear output cell
                         Jupyter.notebook.clear_output(Jupyter.notebook.get_selected_index())
+
+                        // TODO: if in run all mode, move to last cell, otherwise move to next cell
                         // move to next cell
 
                     </script></body></html>"""
 
                 Display.show(html_str)
+        return self._get_header(token_response)
 
-        return token_response['accessToken']
-
+    def _get_header(self, token):
+        return "{0} {1}".format(
+            token[TokenResponseFields.TOKEN_TYPE], token[TokenResponseFields.ACCESS_TOKEN]
+    )

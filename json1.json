@@ -1,0 +1,109 @@
+[
+  {
+    "FrameType": "DataSetHeader",
+    "IsProgressive": "False",
+    "Version": "v2.0"
+  },
+  {
+    "FrameType": "DataTable",
+    "TableId": 0,
+    "TableKind": "QueryProperties",
+    "TableName": "@ExtendedProperties",
+    "Columns": [
+      {
+        "ColumnName": "TableId",
+        "ColumnType": "int"
+      },
+      {
+        "ColumnName": "Key",
+        "ColumnType": "string"
+      },
+      {
+        "ColumnName": "Value",
+        "ColumnType": "dynamic"
+      }
+    ],
+    "Rows": [ [ 1, "Visualization", "{\"Visualization\":null,\"Title\":null,\"XColumn\":null,\"Series\":null,\"YColumns\":null,\"XTitle\":null,\"YTitle\":null,\"XAxis\":null,\"YAxis\":null,\"Legend\":null,\"YSplit\":null,\"Accumulate\":false,\"IsQuerySorted\":false,\"Kind\":null}" ] ]
+  },
+  {
+    "FrameType": "DataTable",
+    "TableId": 1,
+    "TableKind": "PrimaryResult",
+    "TableName": "PrimaryResult",
+    "Columns": [
+      {
+        "ColumnName": "Count",
+        "ColumnType": "long"
+      }
+    ],
+    "Rows": [ [ 10 ] ]
+  },
+  {
+    "FrameType": "DataTable",
+    "TableId": 2,
+    "TableKind": "QueryCompletionInformation",
+    "TableName": "QueryCompletionInformation",
+    "Columns": [
+      {
+        "ColumnName": "Timestamp",
+        "ColumnType": "datetime"
+      },
+      {
+        "ColumnName": "ClientRequestId",
+        "ColumnType": "string"
+      },
+      {
+        "ColumnName": "ActivityId",
+        "ColumnType": "guid"
+      },
+      {
+        "ColumnName": "SubActivityId",
+        "ColumnType": "guid"
+      },
+      {
+        "ColumnName": "ParentActivityId",
+        "ColumnType": "guid"
+      },
+      {
+        "ColumnName": "Level",
+        "ColumnType": "int"
+      },
+      {
+        "ColumnName": "LevelName",
+        "ColumnType": "string"
+      },
+      {
+        "ColumnName": "StatusCode",
+        "ColumnType": "int"
+      },
+      {
+        "ColumnName": "StatusCodeName",
+        "ColumnType": "string"
+      },
+      {
+        "ColumnName": "EventType",
+        "ColumnType": "int"
+      },
+      {
+        "ColumnName": "EventTypeName",
+        "ColumnType": "string"
+      },
+      {
+        "ColumnName": "Payload",
+        "ColumnType": "string"
+      }
+    ],
+    "Rows": [
+      [ "2018-08-09T13:56:44.2345821Z", "KPC.execute;2273634d-3721-4106-b27f-6a17c6931074", "320b8c5b-834b-4ea2-ab76-1a2f33a3f25f", "53a3998a-d487-44d7-aa63-5d28b992fff9", "df40a3e3-4832-4825-9a56-f7fdc0949b1b", 4, "Info", 0, "S_OK (0)", 4, "QueryInfo", "{\"Count\":1,\"Text\":\"Query completed successfully\"}" ],
+      [ "2018-08-09T13:56:44.2345821Z", "KPC.execute;2273634d-3721-4106-b27f-6a17c6931074", "320b8c5b-834b-4ea2-ab76-1a2f33a3f25f", "53a3998a-d487-44d7-aa63-5d28b992fff9", "df40a3e3-4832-4825-9a56-f7fdc0949b1b", 6, "Stats", 0, "S_OK (0)", 0, "QueryResourceConsumption", "{\"ExecutionTime\":0.0,\"resource_usage\":{\"cache\":{\"memory\":{\"hits\":0,\"misses\":0,\"total\":0},\"disk\":{\"hits\":0,\"misses\":0,\"total\":0}},\"cpu\":{\"user\":\"00:00:00\",\"kernel\":\"00:00:00\",\"total cpu\":\"00:00:00\"},\"memory\":{\"peak_per_node\":704}},\"input_dataset_statistics\":{\"extents\":{\"total\":0,\"scanned\":0},\"rows\":{\"total\":0,\"scanned\":0}},\"dataset_statistics\":[{\"table_row_count\":1,\"table_size\":8}]}" ]
+    ]
+  },
+  {
+    "FrameType": "DataSetCompletion",
+    "HasErrors": "False",
+    "Cancelled": "False"
+  }
+]
+
+
+

@@ -50,8 +50,8 @@ class KqlRow(object):
 
 class KqlRowsIter(object):
     """ Iterator over returned rows, limited by size """
-    def __init__(self, response, row_num, col_num):
-        self.response = response
+    def __init__(self, table, row_num, col_num):
+        self.table = table
         self.next = 0
         self.last = row_num
         self.col_num = col_num
@@ -59,7 +59,7 @@ class KqlRowsIter(object):
 
     def __iter__(self):
         self.next = 0
-        self.iter_all_iter = self.response.iter_all()
+        self.iter_all_iter = self.table.iter_all()
         return self
 
 
@@ -82,74 +82,35 @@ class KqlRowsIter(object):
 class KqlResponse(object):
     # Object constructor
     def __init__(self, response):
-        self.data_table = None
-        self.visualization_properties = None
-        self.row_count = 0
-        self.col_count = 0
-        self.response = response
-        self._get_data_table()
-        self._get_visualization_properties()
-        if self.data_table:
-            self.row_count = len(self.data_table['Rows'])
-            self.col_count = len(self.data_table['Columns'])
-
-
-    def _get_data_table(self):
-        if not self.data_table:
-            if isinstance(self.response.get_raw_response(), list):
-                for t in self.response.get_raw_response():
-                    if t['FrameType'] == 'DataTable' and t['TableName'] == 'PrimaryResult':
-                        self.data_table = t
-                        break
-            else:
-                self.data_table = self.response.get_raw_response()['Tables'][0]
-        return self.data_table
+        self.completion_query_info = None
+        self.completion_query_resource_consumption = None
+        self.data_table =  response.primary_results
+        self.columns_count = self.data_table.columns_count
+        self.visualization_properties = response.visualization_results
+        self.completion_query_info = response.completion_query_info_results
+        self.completion_query_resource_consumption =response.completion_query_resource_consumption_results
 
     def fetchall(self):
-        return KqlRowsIter(self.response, self.row_count, self.col_count)
+        return KqlRowsIter(self.data_table, self.data_table.rows_count, self.data_table.columns_count)
 
 
     def fetchmany(self, size):
-        return KqlRowsIter(self.response, min(size, self.row_count), self.col_count)
+        return KqlRowsIter(self.data_table, min(size, self.data_table.rows_count), self.data_table.columns_count)
 
 
     def rowcount(self):
-        return self.row_count
+        return self.data_table.rows_count
 
     def colcount(self):
-        return self.col_count
+        return self.data_table.columns_count
 
     def recordscount(self):
-        return self.row_count
+        return self.data_table.rows_count
 
 
     def keys(self):
-        result = []
-        if self.data_table:
-            for value in self.data_table['Columns']:
-                result.append(value['ColumnName'])
-        return result
+        return self.data_table.columns_name
 
-
-
-    def _get_visualization_properties(self):
-        " returns the table that contains the extended properties"
-        if not self.visualization_properties:
-            if isinstance(self.response.get_raw_response(), list):
-                for t in self.response.get_raw_response():
-                    if t['FrameType'] == 'DataTable' and t['TableName'] == '@ExtendedProperties':
-                        for r in t['Rows']:
-                            if r[1] == 'Visualization':
-                                # print('visualization_properties: {}'.format(r[2]))
-                                self.visualization_properties = json.loads(r[2])
-            else:
-                table_num = self.response.get_raw_response()['Tables'].__len__()
-                for r in self.response.get_raw_response()['Tables'][table_num - 1]['Rows']:
-                    if r[2] == "@ExtendedProperties":
-                        t = self.response.get_raw_response()['Tables'][r[0]]
-                        # print('visualization_properties: {}'.format(t['Rows'][0][0]))
-                        self.visualization_properties = json.loads(t['Rows'][0][0])
-        return self.visualization_properties
 
     def visualization_property(self, name):
         " returns value of attribute: Visualization, Title, Accumulate, IsQuerySorted, Kind, Annotation, By"
@@ -160,11 +121,16 @@ class KqlResponse(object):
             return value if value != "" else None
         except:
             return None
+    
+    def _map_columns_to_index(self, columns : list):
+        map = {}
+        for idx, col in enumerate(columns):
+            map[col['ColumnName']] = idx
+        return map
 
 
     def returns_rows(self):
-        return self.row_count > 0
-
+        return self.data_table.rows_count > 0
 
 class FakeResultProxy(object):
     """A fake class that pretends to behave like the ResultProxy.

@@ -1,0 +1,39 @@
+{
+  "ExecutionTime": 1.1874983,
+  "resource_usage": {
+    "cache": {
+      "memory": {
+        "hits": 59143,
+        "misses": 0,
+        "total": 59143
+      },
+      "disk": {
+        "hits": 0,
+        "misses": 0,
+        "total": 0
+      }
+    },
+    "cpu": {
+      "user": "00:00:01.1718750",
+      "kernel": "00:00:00",
+      "total cpu": "00:00:01.1718750"
+    },
+    "memory": { "peak_per_node": 0 }
+  },
+  "input_dataset_statistics": {
+    "extents": {
+      "total": 1,
+      "scanned": 1
+    },
+    "rows": {
+      "total": 60000000,
+      "scanned": 60000000
+    }
+  },
+  "dataset_statistics": [
+    {
+      "table_row_count": 10,
+      "table_size": 158
+    }
+  ]
+}

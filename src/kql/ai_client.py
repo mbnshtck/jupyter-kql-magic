@@ -28,17 +28,17 @@ class AppinsightsResult(dict):
         return val
 
 
-class AppinsightsResultIter(object):
+class AppinsightsResponseTable(object):
     """ Iterator over returned rows """
-    def __init__(self, json_result):
-        self.json_result = json_result
+    def __init__(self, json_response_table):
+        self.json_response_table = json_response_table
         self.index2column_mapping = []
         self.index2type_mapping = []
-        for c in json_result['Columns']:
+        for c in json_response_table['Columns']:
             self.index2column_mapping.append(c['ColumnName'])
             self.index2type_mapping.append(c['DataType'])
         self.next = 0
-        self.last = len(json_result['Rows'])
+        self.last = len(json_response_table['Rows'])
         # Here we keep converter functions for each type that we need to take special care (e.g. convert)
         self.converters_lambda_mappings = {'DateTime': self.to_datetime, 'TimeSpan': self.to_timedelta}
 
@@ -73,7 +73,7 @@ class AppinsightsResultIter(object):
         if self.next >= self.last:
             raise StopIteration
         else:
-            row = self.json_result['Rows'][self.next]
+            row = self.json_response_table['Rows'][self.next]
             result_dict = {}
             for index, value in enumerate(row):
                 data_type = self.index2type_mapping[index]
@@ -84,6 +84,30 @@ class AppinsightsResultIter(object):
             self.next = self.next + 1
             return AppinsightsResult(self.index2column_mapping, result_dict)
 
+    @property
+    def columns_name(self):
+        return self.index2column_mapping
+
+    @property
+    def rows_count(self):
+        return len(self.json_response_table['Rows'])
+
+    @property
+    def columns_count(self):
+        return len(self.json_response_table['Columns'])
+
+    def fetchall(self):
+        """ Returns iterator to get rows from response """
+        # TODO: we called this fethall to resemble Python DB API,
+        # but this can be as easily called result or similar
+        return self.__iter__()
+
+    def iter_all(self):
+        """ Returns iterator to get rows from response """
+        # TODO: we called this fethall to resemble Python DB API,
+        # but this can be as easily called result or similar
+        return self.__iter__()
+
 
 class AppinsightsResponse(object):
     """ Wrapper for response """
@@ -91,6 +115,28 @@ class AppinsightsResponse(object):
 
     def __init__(self, json_response):
         self.json_response = json_response
+        self.primary_results = AppinsightsResponseTable(self.json_response['Tables'][0])
+
+    @property
+    def visualization_results(self):
+        tables_num = self.json_response['Tables'].__len__()
+        last_table = self.json_response['Tables'][tables_num - 1]
+        for r in last_table['Rows']:
+            if r[2] == "@ExtendedProperties":
+                t = self.json_response['Tables'][r[0]]
+                # print('visualization_properties: {}'.format(t['Rows'][0][0]))
+                return json.loads(t['Rows'][0][0])
+        return None
+
+    @property
+    def completion_query_info_results(self):
+        # todo: implement it
+        return {}
+
+    @property
+    def completion_query_resource_consumption_results(self):
+        # todo: implement it
+        return {}
 
     def get_raw_response(self):
         return self.json_response
@@ -103,18 +149,6 @@ class AppinsightsResponse(object):
 
     def get_exceptions(self):
         return self.json_response['Exceptions']
-
-    def fetchall(self, table_id=0):
-        """ Returns iterator to get rows from response """
-        # TODO: we called this fethall to resemble Python DB API,
-        # but this can be as easily called result or similar
-        return AppinsightsResultIter(self.json_response['Tables'][table_id])
-
-    def iter_all(self, table_id=0):
-        """ Returns iterator to get rows from response """
-        # TODO: we called this fethall to resemble Python DB API,
-        # but this can be as easily called result or similar
-        return AppinsightsResultIter(self.json_response['Tables'][table_id])
 
 # used in Kqlmagic
 class AppinsightsError(Exception):
@@ -194,23 +228,29 @@ class AppinsightsClient(object):
         self.appid = appid
         self.appkey = appkey
 
-    def execute(self, appid, query:str, accept_partial_results = False):
+    def execute(self, appid, query:str, accept_partial_results = False, timeout = None, get_raw_response=False):
         """ Execute a simple query
         
         Parameters
         ----------
         kusto_database : str
             Database against query will be executed.
-        query : str
+        kusto_query : str
             Query to be executed
+        query_endpoint : str
+            The query's endpoint
         accept_partial_results : bool
             Optional parameter. If query fails, but we receive some results, we consider results as partial.
             If this is True, results are returned to client, even if there are exceptions.
             If this is False, exception is raised. Default is False.
+        timeout : float, optional
+            Optional parameter. Network timeout in seconds. Default is no timeout.
+        get_raw_response : bool, optional
+            Optional parameter. Whether to get a raw response, or a parsed one.
         """
-        return self.execute_query(appid, query, accept_partial_results)
+        return self.execute_query(appid, query, accept_partial_results, timeout, get_raw_response)
 
-    def execute_query(self, appid, query:str, accept_partial_results = False):
+    def execute_query(self, appid, query:str, accept_partial_results = False, timeout = None, get_raw_response=False):
         """ Execute a simple query 
         
         Parameters
@@ -225,12 +265,16 @@ class AppinsightsClient(object):
             Optional parameter. If query fails, but we receive some results, we consider results as partial.
             If this is True, results are returned to client, even if there are exceptions.
             If this is False, exception is raised. Default is False.
+        timeout : float, optional
+            Optional parameter. Network timeout in seconds. Default is no timeout.
+        get_raw_response : bool, optional
+            Optional parameter. Whether to get a raw response, or a parsed one.
         """
         query_endpoint = '{0}/{1}/apps/{2}/query'.format(self.cluster, self.version, self.appid)
-        return self._execute(query, query_endpoint, accept_partial_results)
+        return self._execute(query, query_endpoint, accept_partial_results, timeout, get_raw_response)
 
 
-    def _execute(self, query, query_endpoint, accept_partial_results = False):
+    def _execute(self, query, query_endpoint, accept_partial_results = False, timeout = None, get_raw_response=False):
         """ Executes given query against this client """
 
         request_payload = {

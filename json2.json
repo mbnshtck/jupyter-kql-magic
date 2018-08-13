@@ -1,0 +1,96 @@
+{
+  "Tables": [
+    {
+      "TableName": "Table_0",
+      "Columns": [
+        {
+          "ColumnName": "DatabaseName",
+          "DataType": "String"
+        },
+        {
+          "ColumnName": "TableName",
+          "DataType": "String"
+        },
+        {
+          "ColumnName": "ColumnName",
+          "DataType": "String"
+        },
+        {
+          "ColumnName": "ColumnType",
+          "DataType": "String"
+        },
+        {
+          "ColumnName": "IsDefaultTable",
+          "DataType": "Boolean"
+        },
+        {
+          "ColumnName": "IsDefaultColumn",
+          "DataType": "Boolean"
+        },
+        {
+          "ColumnName": "PrettyName",
+          "DataType": "String"
+        },
+        {
+          "ColumnName": "Version",
+          "DataType": "String"
+        },
+        {
+          "ColumnName": "Folder",
+          "DataType": "String"
+        },
+        {
+          "ColumnName": "DocString",
+          "DataType": "String"
+        }
+      ],
+      "Rows": [
+        [ "Samples", "None", "None", "None", "False", "False", "None", "v214.0", "None", "None" ],
+        [ "Samples", "StormEvents", "None", "None", "False", "False", "None", "None", "None", "None" ],
+        [ "Samples", "StormEvents", "StartTime", "System.DateTime", "False", "False", "None", "None", "None", "None" ],
+        [ "Samples", "StormEvents", "EndTime", "System.DateTime", "False", "False", "None", "None", "None", "None" ],
+        [ "Samples", "StormEvents", "EpisodeId", "System.Int32", "False", "False", "None", "None", "None", "None" ],
+        [ "Samples", "StormEvents", "EventId", "System.Int32", "False", "False", "None", "None", "None", "None" ],
+        [ "Samples", "StormEvents", "State", "System.String", "False", "False", "None", "None", "None", "None" ],
+        [ "Samples", "StormEvents", "EventType", "System.String", "False", "False", "None", "None", "None", "None" ],
+        [ "Samples", "StormEvents", "InjuriesDirect", "System.Int32", "False", "False", "None", "None", "None", "None" ],
+        [ "Samples", "StormEvents", "InjuriesIndirect", "System.Int32", "False", "False", "None", "None", "None", "None" ],
+        [ "Samples", "StormEvents", "DeathsDirect", "System.Int32", "False", "False", "None", "None", "None", "None" ],
+        [ "Samples", "StormEvents", "DeathsIndirect", "System.Int32", "False", "False", "None", "None", "None", "None" ],
+        [ "Samples", "StormEvents", "DamageProperty", "System.Int32", "False", "False", "None", "None", "None", "None" ],
+        [ "Samples", "StormEvents", "DamageCrops", "System.Int32", "False", "False", "None", "None", "None", "None" ],
+        [ "Samples", "StormEvents", "Source", "System.String", "False", "False", "None", "None", "None", "None" ],
+        [ "Samples", "StormEvents", "BeginLocation", "System.String", "False", "False", "None", "None", "None", "None" ],
+        [ "Samples", "StormEvents", "EndLocation", "System.String", "False", "False", "None", "None", "None", "None" ],
+        [ "Samples", "StormEvents", "BeginLat", "System.Double", "False", "False", "None", "None", "None", "None" ],
+        [ "Samples", "StormEvents", "BeginLon", "System.Double", "False", "False", "None", "None", "None", "None" ],
+        [ "Samples", "StormEvents", "EndLat", "System.Double", "False", "False", "None", "None", "None", "None" ],
+        [ "Samples", "StormEvents", "EndLon", "System.Double", "False", "False", "None", "None", "None", "None" ],
+        [ "Samples", "StormEvents", "EpisodeNarrative", "System.String", "False", "False", "None", "None", "None", "None" ],
+        [ "Samples", "StormEvents", "EventNarrative", "System.String", "False", "False", "None", "None", "None", "None" ],
+        [ "Samples", "StormEvents", "StormSummary", "System.Object", "False", "True", "None", "None", "None", "None" ],
+        [ "Samples", "tsa_example_data", "None", "None", "False", "False", "None", "None", "None", "None" ],
+        [ "Samples", "tsa_example_data", "TIMESTAMP", "System.DateTime", "False", "False", "None", "None", "None", "None" ],
+        [ "Samples", "tsa_example_data", "AppName", "System.String", "False", "False", "None", "None", "None", "None" ],
+        [ "Samples", "tsa_example_data", "Operation", "System.String", "False", "False", "None", "None", "None", "None" ],
+        [ "Samples", "tsa_example_data", "DurAvg", "System.Double", "False", "False", "None", "None", "None", "None" ],
+        [ "Samples", "tsa_example_data", "Rcount", "System.Double", "False", "True", "None", "None", "None", "None" ],
+        [ "Samples", "PageViewsSample", "None", "None", "False", "False", "None", "None", "None", "None" ],
+        [ "Samples", "PageViewsSample", "Timestamp", "System.DateTime", "False", "False", "None", "None", "None", "None" ],
+        [ "Samples", "PageViewsSample", "Language", "System.String", "False", "False", "None", "None", "None", "None" ],
+        [ "Samples", "PageViewsSample", "Page", "System.String", "False", "False", "None", "None", "None", "None" ],
+        [ "Samples", "PageViewsSample", "Views", "System.Int64", "False", "False", "None", "None", "None", "None" ],
+        [ "Samples", "PageViewsSample", "BytesDelivered", "System.Int64", "False", "True", "None", "None", "None", "None" ],
+        [ "Samples", "PageViews", "None", "None", "False", "False", "None", "None", "None", "None" ],
+        [ "Samples", "PageViews", "Timestamp", "System.DateTime", "False", "False", "None", "None", "None", "None" ],
+        [ "Samples", "PageViews", "Language", "System.String", "False", "False", "None", "None", "None", "None" ],
+        [ "Samples", "PageViews", "Page", "System.String", "False", "False", "None", "None", "None", "None" ],
+        [ "Samples", "PageViews", "Views", "System.Int64", "False", "False", "None", "None", "None", "None" ],
+        [ "Samples", "PageViews", "BytesDelivered", "System.Int64", "False", "True", "None", "None", "None", "None" ],
+        [ "Samples", "ForecastExample", "None", "None", "False", "False", "None", "None", "None", "None" ],
+        [ "Samples", "ForecastExample", "Timestamp", "System.DateTime", "False", "False", "None", "None", "None", "None" ],
+        [ "Samples", "ForecastExample", "RequestCount", "System.Int64", "False", "True", "None", "None", "None", "None" ]
+      ]
+    }
+  ]
+}
