@@ -82,9 +82,9 @@ class Connection(object):
                 cls.current = cls.connections.get(descriptor) or Connection(descriptor).current
         else:
             if not cls.current:
-                if not os.getenv('KQL_CONNECTION_STR'):
+                if not os.getenv('KQLMAGIC_CONNECTION_STR'):
                     raise ConnectionError('No current connection set yet.')
-                cls.current = Connection(os.getenv('KQL_CONNECTION_STR')).current
+                cls.current = Connection(os.getenv('KQLMAGIC_CONNECTION_STR')).current
         cls.last_current_by_engine[cls.current.__class__.__name__] = cls.current
         return cls.current
 

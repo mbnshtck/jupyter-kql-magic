@@ -5,6 +5,7 @@ import six
 import codecs
 import os.path
 import re
+import uuid
 import prettytable
 from kql.column_guesser import ColumnGuesserMixin
 
@@ -113,14 +114,15 @@ class ResultSet(list, ColumnGuesserMixin):
 
         self.current_colors_palette = ['rgb(184, 247, 212)', 'rgb(111, 231, 219)', 'rgb(127, 166, 238)', 'rgb(131, 90, 241)']
 
+        self.queryResult = queryResult
+        self.query = query
+        self.options = options
+
         self.info = []
         self.conn_info = []
         # list of columns_name
         self.columns_name = queryResult.keys()
-
-        # query
-        self.query = query
-        self.options = options
+        self.columns_type = queryResult.types()
 
         # metadata
         self.start_time = None
@@ -150,12 +152,24 @@ class ResultSet(list, ColumnGuesserMixin):
             self.records_count = queryResult.recordscount()
             self.visualization = queryResult.visualization_property("Visualization")
             self.title = queryResult.visualization_property("Title")
-            self.completion_query_info = queryResult.completion_query_info
-            self.completion_query_resource_consumption = queryResult.completion_query_resource_consumption
+            self._completion_query_info = queryResult.completion_query_info
+            self._completion_query_resource_consumption = queryResult.completion_query_resource_consumption
+            self._json_response = queryResult.json_response
         else:
             list.__init__(self, [])
             self.pretty = None
 
+    @property
+    def raw_json(self):
+        return Display.to_styled_class(self._json_response, **self.options)
+
+    @property
+    def completion_query_info(self):
+        return Display.to_styled_class(self._completion_query_info, **self.options)
+
+    @property
+    def completion_query_resource_consumption(self):
+        return  Display.to_styled_class(self._completion_query_resource_consumption, **self.options)
 
     # IPython html presentation of the object
     def _repr_html_(self):
@@ -169,14 +183,8 @@ class ResultSet(list, ColumnGuesserMixin):
         if not self.suppress_result:
             if self.is_chart():
                 self.show_chart(**self.options)
-                # char_html = self._getChartHtml()
-                # self.html_body.append(char_html.get("body", ""))
-                # self.html_head.append(char_html.get("head", ""))
             else:
                 self.show_table(**self.options)
-                # table_html = self._getTableHtml()
-                # self.html_body.append(table_html.get("body", ""))
-                # self.html_head.append(table_html.get("head", ""))
 
         if self.display_info:
             Display.showInfoMessage(self.info)
@@ -253,7 +261,10 @@ class ResultSet(list, ColumnGuesserMixin):
     def to_dict(self):
         """Returns a single dict built from the result set
         Keys are column names; values are a tuple"""
-        return dict(zip(self.columns_name, zip(*self)))
+        if len(self):
+            return dict(zip(self.columns_name, zip(*self)))
+        else:
+            return dict(zip(self.columns_name, [() for c in self.columns_name]))
 
 
     def dicts_iterator(self):
@@ -261,13 +272,14 @@ class ResultSet(list, ColumnGuesserMixin):
         for row in self:
             yield dict(zip(self.columns_name, row))
 
-
     def to_dataframe(self):
         "Returns a Pandas DataFrame instance built from the result set."
         if self._dataframe is None:
-            import pandas as pd
-            frame = pd.DataFrame(self, columns=(self and self.columns_name) or [])
-            self._dataframe = frame
+            self._dataframe = self.queryResult.to_dataframe()
+
+            # import pandas as pd
+            # frame = pd.DataFrame(self, columns=(self and self.columns_name) or [])
+            # self._dataframe = frame
         return self._dataframe
 
     def submit(self):
@@ -294,8 +306,9 @@ class ResultSet(list, ColumnGuesserMixin):
             options["botton_text"] = 'popup ' + self.visualization + ((' - ' + self.title) if self.title else '') + ' '
         c = self._getChartHtml(window_mode)
         if c is not None:
-            html = Display.toHtml(**c)
-            Display.show(html, **options)
+            if c.get("body") or c.get("head"):
+                html = Display.toHtml(**c)
+                Display.show(html, **options)
             return None
         else:
             return self.show_table(**kwargs)
@@ -318,6 +331,18 @@ class ResultSet(list, ColumnGuesserMixin):
 
         if not self.is_chart():
             return None
+
+        if (len(self) == 0):
+            id = uuid.uuid4().hex
+            head = """<style>#uuid-""" +id+ """ {
+                display: block; 
+                font-style:italic;
+                font-size:300%;
+                text-align:center;
+            } </style>"""
+
+            body = '<div id="uuid-' +id+ '"><br><br>EMPTY CHART (no data)<br><br>.</div>'
+            return {"body" : body, "head": head}
 
         figure_or_data = None
         # First column is color-axis, second column is numeric
@@ -365,9 +390,13 @@ class ResultSet(list, ColumnGuesserMixin):
             figure_or_data = self._render_scatterchart_plotly(" ", self.title)
 
         if figure_or_data is not None:
-            head = '<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>' if window_mode and not self.options.get("plotly_fs_includejs", False) else ""
-            body = plotly.offline.plot(figure_or_data, include_plotlyjs= window_mode and self.options.get("plotly_fs_includejs", False), output_type='div')
-            return {"body" : body, "head" : head}
+            if window_mode:
+                head = '<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>' if window_mode and not self.options.get("plotly_fs_includejs", False) else ""
+                body = plotly.offline.plot(figure_or_data, include_plotlyjs= window_mode and self.options.get("plotly_fs_includejs", False), output_type='div')
+                return {"body" : body, "head" : head}
+            else:
+                plotly.offline.iplot(figure_or_data, filename='plotlychart')
+                return {}
         return None
 
 

@@ -61,7 +61,16 @@ class Kqlmagic(Magics, Configurable):
     validate_connection_string = Bool(True, config=True, help="Validate connectionString with an implicit query, when query statement is missing. Abbreviation: vc")
     auto_popup_schema = Bool(True, config=True, help="Popup schema when connecting to a new database. Abbreviation: aps")
 
+    json_display = Enum(['raw', 'native', 'formatted'], 'formatted', config=True, help="Set json/dict display format. Abbreviation: jd")
+
     showfiles_folder_name = Unicode('temp_showfiles', config=True, help="Set the name of folder for temporary popup files")
+
+    # valid values: jupyterlab or jupyternotebook
+    notebook_app = Enum(['jupyterlab', 'jupyternotebook'], 'jupyternotebook', config=True, help="Set notebook application used.")
+    add_kql_ref_to_help = Bool(True, config=True, help="On Kqlmagic load auto add kql reference to Help menu.")
+
+    add_schema_to_help = Bool(True, config=True, help="On connection to database@cluster add  schema to Help menu.")
+
 
 
 
@@ -86,6 +95,66 @@ class Kqlmagic(Magics, Configurable):
 
         # Add ourself to the list of module configurable via %config
         self.shell.configurables.append(self)
+
+        ip = get_ipython()
+        kql_magic_load_mode = _get_kql_magic_load_mode()
+
+        if kql_magic_load_mode != 'silent':
+            html_str = """<html>
+            <head>
+            <style>
+            .kqlmagic-banner {
+                display: flex; 
+                background-color: #d9edf7;
+            }
+            .kqlmagic-banner > div {
+                margin: 10px; 
+                padding: 20px; 
+                color: #3a87ad; 
+                font-size: 13px;
+            }
+            </style>
+            </head>
+            <body>
+                <div class='kqlmagic-banner'>
+                    <div><img src='data:image/png;base64,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'></div>
+                    <div>
+                        <p>Kusto is a log analytics cloud platform optimized for ad-hoc big data queries. Read more about it here: http://aka.ms/kdocs</p>
+                        <p>   &bull; kql language reference: Click on 'Help' tab > and Select 'kql referece'<br>
+                          &bull; Kqlmagic configuarion: Run in cell '%config kqlmagic'<br>
+                          &bull; Kqlmagic syntax: Run in cell '%kql?'<br>
+                          &bull; Kqlmagic upgrate syntax: Run 'pip install git+git://github.com/mbnshtck/jupyter-kql-magic.git --upgrade'<br>
+                    </div>
+                </div>
+            </body>
+            </html>"""
+            Display.show(html_str)
+            Display.showInfoMessage("""Kqlmagic version: """ +VERSION+ """, source: https://github.com/mbnshtck/jupyter-kql-magic""")
+            #<div><img src='https://az818438.vo.msecnd.net/icons/kusto.png'></div>
+        _override_default_configuration(ip, kql_magic_load_mode)
+
+        root_path = get_ipython().starting_dir.replace('\\', '/')
+
+        folder_name = ip.run_line_magic('config', 'Kqlmagic.showfiles_folder_name')
+        showfiles_folder_Full_name = root_path + '/' + folder_name
+        if not os.path.exists(showfiles_folder_Full_name):
+            os.makedirs(showfiles_folder_Full_name)
+         # ipython will removed folder at shutdown or by restart
+        ip.tempdirs.append(showfiles_folder_Full_name)
+        Display.showfiles_base_path = root_path
+        Display.showfiles_folder_name =  Help_html.showfiles_folder_name = folder_name
+        Display.notebooks_host = Help_html.notebooks_host = os.getenv('AZURE_NOTEBOOKS_HOST')
+
+        app = ip.run_line_magic('config', 'Kqlmagic.notebook_app')
+        # add help link
+        add_kql_ref_to_help = ip.run_line_magic('config', 'Kqlmagic.add_kql_ref_to_help')
+        if add_kql_ref_to_help:
+            Help_html.add_menu_item('kql Reference', 'http://aka.ms/kdocs', notebook_app = app)
+        if  app is None or app != 'jupyterlab':
+            display(Javascript("""IPython.notebook.kernel.execute("NOTEBOOK_URL = '" + window.location + "'");"""))
+            time.sleep(5)
+
+
 
     @needs_local_scope
     @line_magic('kql')
@@ -192,22 +261,36 @@ class Kqlmagic(Magics, Configurable):
         user_ns.update(local_ns)
 
         logger().debug("To Parsed: \n\rline: {}\n\rcell:\n\r{}".format(line, cell))
-        parsed_queries = Parser.parse('%s\n%s' % (line, cell), self)
-        logger().debug("Parsed: {}".format(parsed_queries))
-        result = None
-        for parsed in parsed_queries:
-            result = self.execute_query(parsed, user_ns)
-        return result
+        try:
+            parsed_queries = Parser.parse('%s\n%s' % (line, cell), self)
+            logger().debug("Parsed: {}".format(parsed_queries))
+            result = None
+            for parsed in parsed_queries:
+                result = self.execute_query(parsed, user_ns)
+            return result
+        except Exception as e:
+            if parsed:
+                if parsed['options'].get('short_errors', self.short_errors):
+                    Display.showDangerMessage(str(e))
+                    return None
+            elif self.short_errors:
+                Display.showDangerMessage(str(e))
+                return None
+            raise
 
+
+
+    def submit_get_notebook_url(self):
+        if self.notebook_app != 'jupyterlab':
+            display(Javascript("""IPython.notebook.kernel.execute("NOTEBOOK_URL = '" + window.location + "'");"""))
 
     def execute_query(self, parsed, user_ns, result_set = None):
         if Help_html.showfiles_base_url is None:
-            # display(Javascript("""IPython.notebook.kernel.execute("NOTEBOOK_URL = '" + window.location + "'")"""))
             window_location = user_ns.get("NOTEBOOK_URL")
             if window_location is not None:
-                Help_html.flush(window_location)
+                Help_html.flush(window_location, notebook_app =  self.notebook_app)
             else:
-                display(Javascript("""IPython.notebook.kernel.execute("NOTEBOOK_URL = '" + window.location + "'");"""))
+                self.submit_get_notebook_url()
 
         query = parsed['kql'].strip()
         options = parsed['options']
@@ -258,11 +341,11 @@ class Kqlmagic(Magics, Configurable):
 
         try:
             # validate connection
-            retry_with_code = False
-            if options.get('validate_connection_string', self.validate_connection_string) and not conn.options.get('validate_connection_string'):
+            if not conn.options.get('validate_connection_string_done') and options.get('validate_connection_string', self.validate_connection_string):
+                retry_with_code = False
                 validation_query = 'range c from 1 to 10 step 1 | count'
                 try:
-                    raw_table = conn.execute(validation_query)
+                    raw_table = conn.execute(validation_query, **options)
                     conn.set_validation_result(True)
                 except Exception as e:
                     msg = str(e)
@@ -272,20 +355,27 @@ class Kqlmagic(Magics, Configurable):
                     else:
                         raise e
 
-            if retry_with_code:
-                Display.showInfoMessage('replaced connection with code authentication')
-                database_name = conn.get_database()
-                cluster_name = conn.get_cluster()
-                connection_string = "kusto://code().cluster('" +cluster_name+ "').database('" +database_name+ "')"
-                conn = Connection.get_connection(connection_string)
-                raw_table = conn.execute(validation_query)
-                conn.set_validation_result(True)
+                if retry_with_code:
+                    Display.showInfoMessage('replaced connection with code authentication')
+                    database_name = conn.get_database()
+                    cluster_name = conn.get_cluster()
+                    connection_string = "kusto://code().cluster('" +cluster_name+ "').database('" +database_name+ "')"
+                    conn = Connection.get_connection(connection_string)
+                    raw_table = conn.execute(validation_query, **options)
+                    conn.set_validation_result(True)
 
-            conn.options['validate_connection_string'] = True
+            conn.options['validate_connection_string_done'] = True
 
-            if options.get('popup_schema') or (options.get('auto_popup_schema', self.auto_popup_schema) and not conn.options.get('auto_popup_schema')):
-                Database_html.popup_schema(conn)
-            conn.options['auto_popup_schema'] = True
+            schema_file_path = None
+            if options.get('popup_schema') or (not conn.options.get('auto_popup_schema_done') and options.get('auto_popup_schema', self.auto_popup_schema)):
+                schema_file_path = Database_html.get_schema_file_path(conn)
+                Database_html.popup_schema(schema_file_path, conn.get_name())
+
+            conn.options['auto_popup_schema_done'] = True
+            if not conn.options.get('add_schema_to_help_done') and options.get('add_schema_to_help'):
+                schema_file_path = schema_file_path or Database_html.get_schema_file_path(conn)
+                Help_html.add_menu_item(conn.get_name(), schema_file_path, **options)
+                conn.options['add_schema_to_help_done'] = True
 
             if not query:
                 #
@@ -299,7 +389,7 @@ class Kqlmagic(Magics, Configurable):
             #
             start_time = time.time()
 
-            raw_table = conn.execute(query, user_ns)
+            raw_table = conn.execute(query, user_ns, **options)
 
             end_time = time.time()
             elapsed_timespan = end_time - start_time
@@ -388,69 +478,8 @@ def load_ipython_extension(ip):
 
     # js = "IPython.CodeCell.config_defaults.highlight_modes['magic_kql'] = {'reg':[/^%%kql/]};"
     # display_javascript(js, raw=True)
-    kql_magic_load_mode = os.getenv('KQLMAGIC_LOAD_MODE')
-    if kql_magic_load_mode:
-        kql_magic_load_mode = kql_magic_load_mode.strip().lower()
-        if kql_magic_load_mode.startswith("'") or kql_magic_load_mode.startswith('"'):
-            kql_magic_load_mode = kql_magic_load_mode[1:-1].strip()
-    if kql_magic_load_mode != 'silent':
-        html_str = """<html>
-        <head>
-        <style>
-        .kqlmagic-banner {
-            display: flex; 
-            background-color: #d9edf7;
-        }
-        .kqlmagic-banner > div {
-            margin: 10px; 
-            padding: 20px; 
-            color: #3a87ad; 
-            font-size: 13px;
-        }
-        </style>
-        </head>
-        <body>
-            <div class='kqlmagic-banner'>
-                <div><img src='data:image/png;base64,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'></div>
-                <div>
-                    <p>Kusto is a log analytics cloud platform optimized for ad-hoc big data queries. Read more about it here: http://aka.ms/kdocs</p>
-                    <p>   &bull; kql language reference: Click on 'Help' tab > and Select 'kql referece'<br>
-                      &bull; Kqlmagic configuarion: Run in cell '%config kqlmagic'<br>
-                      &bull; Kqlmagic syntax: Run in cell '%kql?'<br>
-                      &bull; Kqlmagic upgrate syntax: Run 'pip install git+git://github.com/mbnshtck/jupyter-kql-magic.git --upgrade'<br>
-                </div>
-            </div>
-        </body>
-        </html>"""
-        Display.show(html_str)
-        Display.showInfoMessage("""Kqlmagic version: """ +VERSION+ """, source: https://github.com/mbnshtck/jupyter-kql-magic""")
-        #<div><img src='https://az818438.vo.msecnd.net/icons/kusto.png'></div>
     result = ip.register_magics(Kqlmagic)
-    _override_default_configuration(ip, kql_magic_load_mode)
-    _set_default_connections(ip, kql_magic_load_mode)
-
-    # add help link
-    Help_html.add_menu_item('kql Reference', 'http://aka.ms/kdocs')
-
-    root_path = get_ipython().starting_dir
-
-    folder_name = ip.run_line_magic('config', 'Kqlmagic.showfiles_folder_name')
-    # print('folder_name = ' + folder_name)
-    showfiles_folder_Full_name = root_path + '/' + folder_name
-    if not os.path.exists(showfiles_folder_Full_name):
-        os.makedirs(showfiles_folder_Full_name)
-     # ipython will removed folder at shutdown or by restart
-    ip.tempdirs.append(showfiles_folder_Full_name)
-    Display.showfiles_base_path = showfiles_folder_Full_name + '/'
-    Display.showfiles_folder_name =  Help_html.showfiles_folder_name = folder_name
-    Display.notebooks_host = Help_html.notebooks_host = os.getenv('AZURE_NOTEBOOKS_HOST')
-
-    # print(Display.showfiles_base_path)
-
-    # get notebook location
-    display(Javascript("""IPython.notebook.kernel.execute("NOTEBOOK_URL = '" + window.location + "'");"""))
-    folder_name = ip.run_line_magic('config', 'Kqlmagic.showfiles_folder_name')
-    time.sleep(5)
+    _set_default_connections()
     return result
 
 def unload_ipython_extension(ip):
@@ -459,12 +488,12 @@ def unload_ipython_extension(ip):
     del ip.magics_manager.magics['line']['kql']
 
 def _override_default_configuration(ip, load_mode):
-    """override default Kqlmagic configuration from environment variable KQL_MAGIC_CONFIGURATION.
+    """override default Kqlmagic configuration from environment variable KQLMAGIC_CONFIGURATION.
        the settings should be separated by a semicolon delimiter.
        for example:
-       KQL_MAGIC_CONFIGURATION = 'auto_limit = 1000; auto_dataframe = True' """
+       KQLMAGIC_CONFIGURATION = 'auto_limit = 1000; auto_dataframe = True' """
 
-    kql_magic_configuration = os.getenv('KQL_MAGIC_CONFIGURATION')
+    kql_magic_configuration = os.getenv('KQLMAGIC_CONFIGURATION')
     if kql_magic_configuration:
         kql_magic_configuration = kql_magic_configuration.strip()
         if kql_magic_configuration.startswith("'") or kql_magic_configuration.startswith('"'):
@@ -474,15 +503,32 @@ def _override_default_configuration(ip, load_mode):
         for pair in pairs:
             ip.run_line_magic('config',  'Kqlmagic.{0}'.format(pair.strip()))
 
-def _set_default_connections(ip, load_mode):
-    kql_magic_connection_str = os.getenv('KQL_MAGIC_CONNECTION_STR')
+    app = os.getenv('KQLMAGIC_NOTEBOOK_APP')
+    if app is not None:
+        app = app.lower().strip().strip('"\'').replace('-', '').replace('/', '')
+        app = {'jupyterlab':'jupyterlab', 'jupyternotebook':'jupyternotebook', 'lab':'jupyterlab', 'notebook': 'jupyternotebook'}.get(app)
+        if app is not None:
+            ip.run_line_magic('config',  'Kqlmagic.notebook_app = "{0}"'.format(app.strip()))
+
+def _get_kql_magic_load_mode():
+    kql_magic_load_mode = os.getenv('KQLMAGIC_LOAD_MODE')
+    if kql_magic_load_mode:
+        kql_magic_load_mode = kql_magic_load_mode.strip().lower()
+        if kql_magic_load_mode.startswith("'") or kql_magic_load_mode.startswith('"'):
+            kql_magic_load_mode = kql_magic_load_mode[1:-1].strip()
+    return kql_magic_load_mode
+
+
+def _set_default_connections():
+    kql_magic_connection_str = os.getenv('KQLMAGIC_CONNECTION_STR')
     if kql_magic_connection_str:
         kql_magic_connection_str = kql_magic_connection_str.strip()
         if kql_magic_connection_str.startswith("'") or kql_magic_connection_str.startswith('"'):
             kql_magic_connection_str = kql_magic_connection_str[1:-1]
 
+        ip = get_ipython()
         result = ip.run_line_magic('kql',  kql_magic_connection_str)
-        if (load_mode != 'silent'):
+        if result and _get_kql_magic_load_mode() != 'silent':
             print(result)
 
 """

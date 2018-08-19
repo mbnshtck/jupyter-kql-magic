@@ -169,13 +169,23 @@ class Parser(object):
                   'aps': {"abbreviation" : "auto_popup_schema"},
                   'auto_popup_schema': {"flag" : "auto_popup_schema", "type" : "bool", "config" : "config.auto_popup_schema"},
 
+                  'jd': {"abbreviation" : "json_display"},
+                  'json_display': {"flag" : "json_display", "type" : "str", "config" : "config.json_display"},
+
                   'ph': {"abbreviation" : "popup_help"},
                   'popup_help': {"flag" : "popup_help", "type" : "bool", "init" : "False"},
 
                   'ps': {"abbreviation" : "popup_schema"},
                   'popup_schema': {"flag" : "popup_schema", "type" : "bool", "init" : "False"},
 
-                  'version': {"flag" : "version", "type" : "bool", "init" : "False"},
+
+                  'showfiles_folder_name': {"flag" : "auto_popup_schema", "readonly" : "True", "config" : "config.showfiles_folder_name"},
+                  'notebook_app': {"flag" : "notebook_app", "readonly" : "True", "config" : "config.notebook_app"},
+                  'add_kql_ref_to_help': {"flag" : "add_kql_ref_to_help", "readonly" : "True", "config" : "config.add_kql_ref_to_help"},
+                  'add_schema_to_help': {"flag" : "add_schema_to_help", "readonly" : "True", "config" : "config.add_schema_to_help"},
+
+
+                  'version': {"flag" : "version", "type": "bool", "init" : "False"},
                   }
 
         for value in options_table.values():
@@ -207,6 +217,8 @@ class Parser(object):
                     trimmed_kql = trimmed_kql[trimmed_kql.find('!')+1:]
                 if word in options_table.keys():
                     obj = options_table.get(word)
+                    if obj.get("readonly"):
+                        raise ValueError('option {0} is readony, cannot be set'.format(word))
                     if obj.get("abbreviation"):
                         obj = options_table.get(obj.get("abbreviation"))
                     type = obj.get("type")
@@ -216,15 +228,12 @@ class Parser(object):
                         trimmed_kql = trimmed_kql[trimmed_kql.find(word)+len(word):]
                     state = type
                 else:
-                    raise
+                    raise ValueError('unknown option')
             elif state == "int":
                 if not bool_value:
-                    raise
-                try:
-                    trimmed_kql = trimmed_kql[trimmed_kql.find(word)+len(word):]
-                    options[key] = int(word)
-                except ValueError as e:
-                    Display.showDangerMessage(str(e))
+                    raise ValueError('option {0} cannot be negated'.format(word))
+                trimmed_kql = trimmed_kql[trimmed_kql.find(word)+len(word):]
+                options[key] = int(word)
                 state = "bool"
             elif state == "str":
                 trimmed_kql = trimmed_kql[trimmed_kql.find(word)+len(word):]

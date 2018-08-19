@@ -141,7 +141,7 @@ class Database_html(object):
         return """<a href="#" class="list-group-item">""" +item+ """</a>"""
 
     @staticmethod
-    def popup_schema(conn):
+    def get_schema_file_path(conn):
         if isinstance(conn, KustoEngine) or isinstance(conn, AppinsightsEngine):
             database_name = conn.get_database()
             conn_name = conn.get_name()
@@ -169,9 +169,12 @@ class Database_html(object):
                         pass
             html_str = Database_html.convert_database_metadata_to_html(database_metadata_tree, conn_name)
             window_name = conn_name.replace('@','_at_') + '_schema'
-            file_path = Display._html_to_file_path(html_str, window_name)
-            botton_text = 'popup schema ' + conn_name
-            Help_html.add_menu_item(conn_name, file_path)
-            Display.show_window(window_name, file_path, botton_text)
+            return Display._html_to_file_path(html_str, window_name)
         else:
             return None
+    @staticmethod
+    def popup_schema(file_path, conn_name):
+        if file_path:
+            botton_text = 'popup schema ' + conn_name
+            window_name = conn_name.replace('@','_at_') + '_schema'
+            Display.show_window(window_name, file_path, botton_text)

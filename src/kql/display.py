@@ -1,9 +1,63 @@
+
 import uuid
 from IPython.core.display import display, HTML
-from IPython.core.magics.display import Javascript
+from IPython.display import JSON
+
+import json
+from pygments import highlight, lexers, formatters
+import datetime
 
 
+class DateTimeEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, datetime.datetime):
+            return obj.isoformat()
+        elif isinstance(obj, datetime.date):
+            return obj.isoformat()
+        elif isinstance(obj, datetime.timedelta):
+            return (datetime.datetime.min + obj).time().isoformat()
+        else:
+            return super(DateTimeEncoder, self).default(obj)
 
+class FormattedJsonDict(dict):
+    def __init__(self,j, *args, **kwargs):
+        super(FormattedJsonDict, self).__init__(*args, **kwargs)
+        self.update(j)
+
+        formatted_json = json.dumps(self, indent=4, sort_keys=True, cls=DateTimeEncoder)
+        self.colorful_json = highlight(formatted_json.encode('UTF-8'), lexers.JsonLexer(), formatters.TerminalFormatter())
+
+    def get(self, key, default=None):
+        item = super(FormattedJsonDict, self).get(key, default)
+        return _getitem_FormattedJson(item)
+
+    def __getitem__(self, key):
+        return self.get(key)
+
+    def __repr__(self):
+        return self.colorful_json
+
+class FormattedJsonList(list):
+    def __init__(self,j, *args, **kwargs):
+        super(FormattedJsonList, self).__init__(*args, **kwargs)
+        self.extend(j)
+        formatted_json = json.dumps(self, indent=4, sort_keys=True, cls=DateTimeEncoder)
+        self.colorful_json = highlight(formatted_json.encode('UTF-8'), lexers.JsonLexer(), formatters.TerminalFormatter())
+
+    def __getitem__(self, key):
+        item = super(FormattedJsonList, self).__getitem__(key)
+        return _getitem_FormattedJson(item)
+
+    def __repr__(self):
+        return self.colorful_json
+
+def _getitem_FormattedJson(item):
+    if isinstance(item, list):
+        return FormattedJsonList(item)
+    elif isinstance(item, dict):
+        return FormattedJsonDict(item)
+    else:
+        return item
 
 
 class Display(object):
@@ -13,7 +67,7 @@ class Display(object):
     danger_style = {'color': '#b94a48', 'background-color': '#f2dede', 'border-color': '#eed3d7' }
     info_style = {'color': '#3a87ad', 'background-color': '#d9edf7', 'border-color': '#bce9f1' }
     warning_style = {'color': '#8a6d3b', 'background-color': '#fcf8e3', 'border-color': '#faebcc' }
-    showfiles_base_url = None
+
     showfiles_base_path = None
     showfiles_folder_name = None
     notebooks_host = None
@@ -35,8 +89,18 @@ class Display(object):
         display(HTML(html_str))
 
     @staticmethod
+    def to_styled_class(item, **kwargs):
+        if kwargs.get('json_display') != 'raw' and (isinstance(item, dict) or isinstance(item, list)):
+            if kwargs.get('json_display') == 'formatted' or kwargs.get('notebook_app') != 'jupyterlab':
+                return _getitem_FormattedJson(item)
+            else:
+                return JSON(item)
+        else:
+            return item
+
+    @staticmethod
     def _html_to_file_path(html_str, file_name, **kwargs):
-        full_file_name = Display.showfiles_base_path +file_name+ ".html"
+        full_file_name = Display.showfiles_base_path  + '/' +Display.showfiles_folder_name+ '/' +file_name+ ".html"
         text_file = open(full_file_name, "w")
         text_file.write(html_str)
         text_file.close()
@@ -72,6 +136,7 @@ class Display(object):
                 } else {
                     var base_url = '';
 
+                    // check if azure notebook
                     var azure_host = (notebooks_host == null || notebooks_host.length == 0) ? 'https://notebooks.azure.com' : notebooks_host;
                     var start = azure_host.search('//');
                     var azure_host_suffix = '.' + azure_host.substring(start+2);
@@ -84,15 +149,32 @@ class Display(object):
                         if (parts.length == 2) {
                             var library = parts[0];
                             var user = parts[1];
-                            base_url = azure_host + '/api/user/' +user+ '/library/' +library+ '/html';
+                            base_url = azure_host + '/api/user/' +user+ '/library/' +library+ '/html/';
                         }
                     }
+
+                    // check if local jupyter lab
                     if (base_url.length == 0) {
+                        var configDataScipt  = document.getElementById('jupyter-config-data');
+                        if (configDataScipt != null) {
+                            var jupyterConfigData = JSON.parse(configDataScipt.textContent);
+                            if (jupyterConfigData['appName'] == 'JupyterLab' && jupyterConfigData['serverRoot'] != null &&  jupyterConfigData['treeUrl'] != null) {
+                                var basePath = '""" +Display.showfiles_base_path+ """' + '/';
+                                if (basePath.startsWith(jupyterConfigData['serverRoot'])) {
+                                    base_url = '/files/' + basePath.substring(jupyterConfigData['serverRoot'].length+1);
+                                }
+                            } 
+                        }
+                    }
+
+                    // assume local jupyter notebook
+                    if (base_url.length == 0) {
+
                         var parts = loc.split('/');
                         parts.pop();
-                        base_url = parts.join('/');
+                        base_url = parts.join('/') + '/';
                     }
-                    url = base_url + '/' + file_path;
+                    url = base_url + file_path;
                 }
 
                 window.focus();

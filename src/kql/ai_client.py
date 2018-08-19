@@ -30,17 +30,30 @@ class AppinsightsResult(dict):
 
 class AppinsightsResponseTable(object):
     """ Iterator over returned rows """
-    def __init__(self, json_response_table):
-        self.json_response_table = json_response_table
+    def __init__(self, response_table):
+        self.rows = response_table['Rows']
+        self.columns = response_table['Columns']
         self.index2column_mapping = []
         self.index2type_mapping = []
-        for c in json_response_table['Columns']:
+        for c in self.columns:
             self.index2column_mapping.append(c['ColumnName'])
-            self.index2type_mapping.append(c['DataType'])
+            ctype = c["ColumnType"] if "ColumnType" in c else c["DataType"]
+            self.index2type_mapping.append(ctype)
         self.next = 0
-        self.last = len(json_response_table['Rows'])
+        self.last = len(self.rows)
         # Here we keep converter functions for each type that we need to take special care (e.g. convert)
-        self.converters_lambda_mappings = {'DateTime': self.to_datetime, 'TimeSpan': self.to_timedelta}
+        self.converters_lambda_mappings = {
+            'datetime': self.to_datetime, 
+            'timespan': self.to_timedelta,
+            'DateTime': self.to_datetime, 
+            'TimeSpan': self.to_timedelta,
+            'dynamic': self.to_object}
+
+    @staticmethod
+    def to_object(value):
+        if value is None:
+            return None
+        return json.loads(value)
 
     @staticmethod
     def to_datetime(value):
@@ -73,7 +86,7 @@ class AppinsightsResponseTable(object):
         if self.next >= self.last:
             raise StopIteration
         else:
-            row = self.json_response_table['Rows'][self.next]
+            row = self.rows[self.next]
             result_dict = {}
             for index, value in enumerate(row):
                 data_type = self.index2type_mapping[index]
@@ -89,12 +102,16 @@ class AppinsightsResponseTable(object):
         return self.index2column_mapping
 
     @property
+    def columns_type(self):
+        return self.index2type_mapping
+
+    @property
     def rows_count(self):
-        return len(self.json_response_table['Rows'])
+        return len(self.rows)
 
     @property
     def columns_count(self):
-        return len(self.json_response_table['Columns'])
+        return len(self.columns)
 
     def fetchall(self):
         """ Returns iterator to get rows from response """
