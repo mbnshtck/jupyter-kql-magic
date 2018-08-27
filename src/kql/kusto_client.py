@@ -4,7 +4,9 @@ import json
 import adal 
 import dateutil.parser
 import requests
-from azure.kusto.data import KustoClient
+from azure.kusto.data.request import KustoClient, KustoConnectionStringBuilder
+from azure.kusto.data.exceptions import KustoServiceError
+# from azure.kusto.data import KustoClient
 from azure.kusto.data._response import WellKnownDataSet
 from kql.my_aad_helper import _MyAadHelper
 
@@ -350,6 +352,8 @@ class Kusto_Client(object):
         client_secret=None,
         username=None,
         password=None,
+        certificate=None,
+        certificate_thumbprint=None,
         authority=None,
     ):
         """
@@ -372,17 +376,30 @@ class Kusto_Client(object):
         authority : 'microsoft.com', optional
             In case your tenant is not microsoft please use this param.
         """
+        if all([username, password]):
+            kcsb = KustoConnectionStringBuilder.with_aad_user_password_authentication(
+                kusto_cluster, username, password
+            )
+        elif all([client_id, client_secret]):
+            kcsb = KustoConnectionStringBuilder.with_aad_application_key_authentication(
+                kusto_cluster, client_id, client_secret
+            )
+        elif all([client_id, certificate, certificate_thumbprint]):
+            kcsb = KustoConnectionStringBuilder.with_aad_application_certificate_authentication(
+                kusto_cluster, client_id, certificate, certificate_thumbprint
+            )
+        else:
+            kcsb = KustoConnectionStringBuilder.with_aad_device_authentication(
+                kusto_cluster
+            )
 
-        self.client = KustoClient(kusto_cluster, client_id, client_secret, username, password, authority)
+        if authority:
+            kcsb.authority_id = authority
+
+        self.client = KustoClient(kcsb)
 
         # replace aadhelper to use remote browser in interactive mode
-        my_aad_helper = _MyAadHelper(kusto_cluster=kusto_cluster, 
-                                    client_id=client_id, 
-                                    client_secret=client_secret, 
-                                    username=username, 
-                                    password=password,
-                                    authority=authority)
-        self.client._aad_helper = my_aad_helper
+        self.client._aad_helper = _MyAadHelper(kcsb)
         self.mgmt_endpoint_version = 'v2' if self.client._mgmt_endpoint.endswith("v2/rest/query") else 'v1'
         self.query_endpoint_version = 'v2' if self.client._query_endpoint.endswith("v2/rest/query") else 'v1'
 

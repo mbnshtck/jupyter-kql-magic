@@ -147,6 +147,8 @@ class KustoEngine(KqlEngine):
                                       client_secret=self._parsed_conn.get('clientsecret'), 
                                       username=self._parsed_conn.get('username'), 
                                       password=self._parsed_conn.get('password'),
+                                      certificate=self._parsed_conn.get('certificate'),
+                                      certificate_thumbprint=self._parsed_conn.get('certificate_thumbprint'),
                                       authority=self._parsed_conn.get('tenant'))
     def get_client(self):
         if self.client is None:
