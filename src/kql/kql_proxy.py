@@ -92,13 +92,17 @@ class KqlResponse(object):
     def __init__(self, response, **kwargs):
         self.json_response = response.json_response
         self.kwargs = kwargs
-        self.completion_query_info = None
-        self.completion_query_resource_consumption = None
-        self.data_table =  response.primary_results
-        self.columns_count = self.data_table.columns_count
         self.visualization_properties = response.visualization_results
         self.completion_query_info = response.completion_query_info_results
         self.completion_query_resource_consumption =response.completion_query_resource_consumption_results
+        self.tables = [KqlTableResponse(t, response.visualization_results) for t in response.primary_results]
+
+class KqlTableResponse(object):
+    def __init__(self, data_table, visualization_results, **kwargs):
+        self.kwargs = kwargs
+        self.visualization_properties = visualization_results
+        self.data_table =  data_table
+        self.columns_count = self.data_table.columns_count
 
     def fetchall(self):
         return KqlRowsIter(self.data_table, self.data_table.rows_count, self.data_table.columns_count, **self.kwargs)
@@ -196,7 +200,6 @@ class KqlResponse(object):
         "Guid": "object",
         "TimeSpan": "object",
     }
-
 
 
 

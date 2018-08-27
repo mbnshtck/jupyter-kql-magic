@@ -110,7 +110,7 @@ class ResultSet(list, ColumnGuesserMixin):
     """
 
     # Object constructor
-    def __init__(self, queryResult, query, options):
+    def __init__(self, queryResult, query, fork_table_id, fork_table_resultSets, options):
 
         self.current_colors_palette = ['rgb(184, 247, 212)', 'rgb(111, 231, 219)', 'rgb(127, 166, 238)', 'rgb(131, 90, 241)']
 
@@ -118,46 +118,63 @@ class ResultSet(list, ColumnGuesserMixin):
         self.query = query
         self.options = options
 
-        self.info = []
-        self.conn_info = []
-        # list of columns_name
-        self.columns_name = queryResult.keys()
-        self.columns_type = queryResult.types()
+        self.fork_table_id = fork_table_id
+        self.fork_table_resultSets = fork_table_resultSets
 
-        # metadata
+        self.fork_table_resultSets[str(self.fork_table_id)] = self
+
+        # set by caller
+        self.feedback_info = []
+        # set by caller
+        self.conn_info = []
+
+
+        # Kqlmagic metadata
         self.start_time = None
         self.end_time = None
         self.elapsed_timespan = None
         self.connection = None
-
-        self._dataframe = None
 
         # table printing style to any of prettytable's defined styles (currently DEFAULT, MSWORD_FRIENDLY, PLAIN_COLUMNS, RANDOM)
         self.prettytable_style = prettytable.__dict__[self.options.get("prettytable_style", "DEFAULT").upper()]
 
         self.display_info = False
         self.suppress_result = False
+
         self._update(queryResult)
 
     def _update(self, queryResult):
-        if queryResult.returns_rows:
-            auto_limit = 0 if not self.options.get("auto_limit") else self.options.get("auto_limit")
+        self._completion_query_info = queryResult.completion_query_info
+        self._completion_query_resource_consumption = queryResult.completion_query_resource_consumption
+        self._json_response = queryResult.json_response
+        queryResultTable = queryResult.tables[self.fork_table_id]
+        self._dataframe = None
+        # schema
+        self.columns_name = queryResultTable.keys()
+        self.columns_type = queryResultTable.types()
+        self.field_names = _unduplicate_field_names(self.columns_name)
+        self.pretty = PrettyTable(self.field_names, style=self.prettytable_style) if len(self.field_names) > 0 else None
+        self.records_count = queryResultTable.recordscount()
+        self.visualization = queryResultTable.visualization_property("Visualization")
+        self.title = queryResultTable.visualization_property("Title")
+        # table
+        auto_limit = 0 if not self.options.get("auto_limit") else self.options.get("auto_limit")
+        if queryResultTable.returns_rows:
             if auto_limit > 0:
-                list.__init__(self, queryResult.fetchmany(size = auto_limit))
+                list.__init__(self, queryResultTable.fetchmany(size = auto_limit))
             else:
-                list.__init__(self, queryResult.fetchall())
+                list.__init__(self, queryResultTable.fetchall())
 
-            self.field_names = _unduplicate_field_names(self.columns_name)
-            self.pretty = PrettyTable(self.field_names, style=self.prettytable_style)
-            self.records_count = queryResult.recordscount()
-            self.visualization = queryResult.visualization_property("Visualization")
-            self.title = queryResult.visualization_property("Title")
-            self._completion_query_info = queryResult.completion_query_info
-            self._completion_query_resource_consumption = queryResult.completion_query_resource_consumption
-            self._json_response = queryResult.json_response
         else:
             list.__init__(self, [])
-            self.pretty = None
+
+    def fork_result(self, fork_table_id=0):
+        result = None
+        if fork_table_id < len(self.queryResult.tables):
+            result = self.fork_table_resultSets.get(str(fork_table_id))
+            if result is None:
+                result = ResultSet(self.queryResult, query, fork_table_id, self.fork_table_resultSets, self.options)
+        return result
 
     @property
     def raw_json(self):
@@ -173,33 +190,23 @@ class ResultSet(list, ColumnGuesserMixin):
 
     # IPython html presentation of the object
     def _repr_html_(self):
-        self.html_body = []
-        self.html_head = []
-        if self.display_info:
-            Display.showInfoMessage(self.conn_info)
-            # msg_html = Display.getInfoMessageHtml(self.conn_info)
-            # self.html_body.append(msg_html.get("body", ""))
-            # self.html_head.append(msg_html.get("head", ""))
         if not self.suppress_result:
+            if self.display_info:
+                Display.showInfoMessage(self.conn_info)
+
             if self.is_chart():
                 self.show_chart(**self.options)
             else:
                 self.show_table(**self.options)
 
-        if self.display_info:
-            Display.showInfoMessage(self.info)
-            # msg_html = Display.getInfoMessageHtml(self.info)
-            # b = msg_html.get("body", "")
-            # if not self.suppress_result and len(b) > 0 and not self.is_chart():
-                #    b = "<br>" + b
-            # self.html_body.append(b)
-            # self.html_head.append(msg_html.get("head", ""))
+            if self.display_info:
+                Display.showInfoMessage(self.feedback_info)
+
+        # display info only once 
         self.display_info = False
+
+        # suppress results info only once 
         self.suppress_result = False
-        # if len(self.html_body) > 0:
-        #     html_body_str = ''.join(self.html_body)
-        #     html_head_str = ''.join(self.html_head) if len(self.html_head) > 0 else ''
-        #     Display.show(Display.toHtml(body = html_body_str, head = html_head_str))
         return ''
 
 
@@ -233,8 +240,12 @@ class ResultSet(list, ColumnGuesserMixin):
         return None
 
     def popup_table(self, **kwargs):
-        "display the table"
+        "display the table in popup window"
         return self.show_table(**{"popup_window" : True, **kwargs})
+
+    def display_table(self, **kwargs):
+        "display the table in cell"
+        return self.show_table(**{"popup_window" : False, **kwargs})
 
     # Printable pretty presentation of the object
     def __str__(self, *args, **kwargs):
@@ -275,7 +286,7 @@ class ResultSet(list, ColumnGuesserMixin):
     def to_dataframe(self):
         "Returns a Pandas DataFrame instance built from the result set."
         if self._dataframe is None:
-            self._dataframe = self.queryResult.to_dataframe()
+            self._dataframe = self.queryResult.tables[self.fork_table_id].to_dataframe()
 
             # import pandas as pd
             # frame = pd.DataFrame(self, columns=(self and self.columns_name) or [])
@@ -314,13 +325,20 @@ class ResultSet(list, ColumnGuesserMixin):
             return self.show_table(**kwargs)
 
     def popup_Chart(self, **kwargs):
-        "display the chart that was specified in the query"
-        return self.show_chart(**{"popup_window" : True, **kwargs})
+        "display the chart that was specified in the query in a popup window"
+        return self.popup(**kwargs)
+
+    def display_Chart(self, **kwargs):
+        "display the chart that was specified in the query in the cell"
+        return self.display(**kwargs)
 
     def popup(self, **kwargs):
         "display the chart that was specified in the query"
         return self.show_chart(**{"popup_window" : True, **kwargs})
 
+    def display(self, **kwargs):
+        "display the chart that was specified in the query"
+        return self.show_chart(**{"popup_window" : False, **kwargs})
 
     def is_chart(self):
         return self.visualization and not self.visualization == 'table'

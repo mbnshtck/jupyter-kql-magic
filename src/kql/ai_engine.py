@@ -54,8 +54,3 @@ class AppinsightsEngine(KqlEngine):
         self.database_name = self.appid
         self.bind_url = "appinsights://appid('{0}').appkey('{1}').cluster('{2}').database('{3}')".format(self.appid,self.appkey,self.cluster_name,self.database_name)
 
-
-    def get_client(self):
-        return self.client
-
-

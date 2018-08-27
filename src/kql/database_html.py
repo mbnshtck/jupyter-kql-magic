@@ -144,21 +144,23 @@ class Database_html(object):
     def get_schema_file_path(conn):
         if isinstance(conn, KustoEngine) or isinstance(conn, AppinsightsEngine):
             database_name = conn.get_database()
-            conn_name = conn.get_name()
+            conn_name = conn.get_conn_name()
 
             if isinstance(conn, KustoEngine):
                 query = '.show schema'
-                raw_table = conn.execute(query)
-                database_metadata_tree = Database_html._create_database_metadata_tree(raw_table.fetchall(), database_name)
+                raw_query_result = conn.execute(query)
+                raw_schema_table = raw_query_result.tables[0]
+                database_metadata_tree = Database_html._create_database_metadata_tree(raw_schema_table.fetchall(), database_name)
 
             elif isinstance(conn, AppinsightsEngine):
                 database_metadata_tree = {}
                 for table_name in Database_html.application_insights_tables:
                     query = table_name + " | getschema"
                     try:
-                        raw_table = conn.execute(query)
-                        rows = raw_table.fetchall()
-                        if (raw_table.returns_rows()):
+                        raw_query_result = conn.execute(query)
+                        raw_schema_table = raw_query_result.tables[0]
+                        rows = raw_schema_table.fetchall()
+                        if raw_schema_table.returns_rows():
                             database_metadata_tree[table_name] = {}
                             for row in rows:
                                 column_name = row['ColumnName']

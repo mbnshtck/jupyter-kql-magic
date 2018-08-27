@@ -139,10 +139,11 @@ class KustoResponse(object):
         if self.endpoint_version == 'v2':
             self.all_tables = [t for t in json_response if t["FrameType"] == "DataTable"]
             self.tables = [t for t in json_response if t["FrameType"] == "DataTable" and t["TableKind"] == "PrimaryResult"]
+            self.primary_results = [KustoResponseTable(t) for t in self.tables]
         else:
             self.all_tables = self.json_response['Tables']
             self.tables = self.json_response['Tables']
-        self.primary_results = KustoResponseTable(self.tables[0])
+            self.primary_results = [KustoResponseTable(self.tables[0])]
 
     @property
     def visualization_results(self):

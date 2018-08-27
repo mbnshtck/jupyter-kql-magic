@@ -33,17 +33,21 @@ class KqlEngine(object):
             raise KqlEngineError("Cluster is not defined.")
         return self.cluster_name
 
-    def get_name(self):
+    def get_conn_name(self):
         if self.database_name and self.cluster_name:
             return '{0}@{1}'.format(self.database_name, self.cluster_name)
         else:
             raise KqlEngineError("Database and/or cluster is not defined.")
 
+    def get_client(self):
+        return self.client
+
     def execute(self, query, user_namespace = None, **kwargs):
         if query.strip():
-            if not self.client:
+            client = self.get_client()
+            if not client:
                 raise KqlEngineError("Client is not defined.")
-            response = self.client.execute(self.get_database(), query, accept_partial_results = False, timeout = None, get_raw_response =True)
+            response = client.execute(self.get_database(), query, accept_partial_results = False, timeout = None, get_raw_response =True)
             # print(response.json_response)
             return KqlResponse(response, **kwargs)
 

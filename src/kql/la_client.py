@@ -134,7 +134,7 @@ class LoganalyticsResponse(object):
 
     def __init__(self, json_response):
         self.json_response = json_response
-        self.primary_results = LoganalyticsResponseTable(self.json_response['Tables'][0])
+        self.primary_results = [LoganalyticsResponseTable(self.json_response['Tables'][0])]
 
     @property
     def visualization_results(self):

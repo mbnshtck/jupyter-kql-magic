@@ -54,8 +54,5 @@ class LoganalyticsEngine(KqlEngine):
         self.bind_url = "loganalytics://workspace('{0}').appkey('{1}').cluster('{2}').database('{3}')".format(self.workspace,self.appkey,self.cluster_name,self.database_name)
 
 
-    def get_client(self):
-        return self.client
-
 
 

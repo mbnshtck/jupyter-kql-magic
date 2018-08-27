@@ -124,8 +124,8 @@ class Parser(object):
                   'f' : {"abbreviation" : "feedback"},
                   'feedback' : {"flag" : "feedback", "type" : "bool", "config" : "config.feedback"},
 
-                  'scl': {"abbreviation" : "show_conn_list"},
-                  'show_conn_list': {"flag" : "show_conn_list", "type" : "bool", "config" : "config.show_conn_list"},
+                  'sci': {"abbreviation" : "show_conn_info"},
+                  'show_conn_info': {"flag" : "show_conn_info", "type" : "str", "config" : "config.show_conn_info"},
 
                   'c2lv' : {"abbreviation" : "columns_to_local_vars"},
                   'columns_to_local_vars' : {"flag" : "columns_to_local_vars", "type" : "bool", "config" : "config.columns_to_local_vars"},

@@ -27,13 +27,19 @@ class KustoEngine(KqlEngine):
                ## Note: if password is missing, user will be prompted to enter password"""
 
     # Object constructor
-    def __init__(self, conn_str, current=None):
+    def __init__(self, conn_str, current=None, conn_class=None):
         super().__init__()
-        # self.client_id = self.client_id or 'e07cf1fb-c6a6-4668-b21a-f74731afa19a'
-        self.cluster_url_template = 'https://{0}.kusto.windows.net'
-        self._parsed_conn = {}
-        self._parse_connection_str(conn_str, current)
-        self._set_client()
+        if isinstance(conn_str, list):
+            self.conn_class = conn_class
+            self.database_name = conn_str[0]
+            self.cluster_name = conn_str[1]
+            self.bind_url = "kusto://cluster('{0}').database('{1}')".format(self.cluster_name, self.database_name)
+        else:
+            # self.client_id = self.client_id or 'e07cf1fb-c6a6-4668-b21a-f74731afa19a'
+            self.cluster_url_template = 'https://{0}.kusto.windows.net'
+            self._parsed_conn = {}
+            self._parse_connection_str(conn_str, current)
+            self._set_client()
 
 
     def _validate_connection_delimiter(self, require_delimiter, delimiter):
@@ -124,15 +130,15 @@ class KustoEngine(KqlEngine):
 
         self.cluster_name = self._parsed_conn.get('cluster')
         self.database_name = self._parsed_conn.get('database')
-        self.bind_url = "kusto://tenant('{0}').code('{1}').clientid('{2}').clientsecret('{3}').username('{4}').password('{5}').cluster('{6}').database('{7}')".format(
+        self.bind_url = "kusto://tenant('{0}').code('{1}').clientid('{2}').clientsecret('{3}').username('{4}').password('{5}').cluster('{6}')".format(
             self._parsed_conn.get('tenant'), 
             self._parsed_conn.get('code'), 
             self._parsed_conn.get('clientid'), 
             self._parsed_conn.get('clientsecret'), 
             self._parsed_conn.get('username'),
             self._parsed_conn.get('password'),
-            self._parsed_conn.get('cluster'),
-            self._parsed_conn.get('database'))
+            self._parsed_conn.get('cluster'))
+#            self._parsed_conn.get('database'))
 
 
     def _set_client(self):
@@ -143,7 +149,13 @@ class KustoEngine(KqlEngine):
                                       password=self._parsed_conn.get('password'),
                                       authority=self._parsed_conn.get('tenant'))
     def get_client(self):
-        return self.client
+        if self.client is None:
+            cluster_connection = self.conn_class.get_connection_by_name('@' + self.cluster_name)
+            if cluster_connection is None:
+                raise KqlEngineError("connection to cluster not set.")
+            return cluster_connection.get_client()
+        else:
+            return self.client
 
 
 
