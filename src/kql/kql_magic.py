@@ -401,41 +401,42 @@ class Kqlmagic(Magics, Configurable):
             raw_query_result = conn.execute(query, user_ns, **options)
 
             end_time = time.time()
-            elapsed_timespan = end_time - start_time
 
             #
             # model query results
             #
             if result_set is None:
-                saved_result = ResultSet(raw_query_result, query, 0, {}, options)
-                saved_result.magic = self
-                saved_result.parsed = parsed
-                saved_result.connection = conn.get_conn_name()
+                fork_table_id = 0
+                saved_result = ResultSet(raw_query_result, query, fork_table_id = 0, fork_table_resultSets = {}, metadata = {}, options = options)
+                saved_result.metadata["magic"] = self
+                saved_result.metadata["parsed"] = parsed
+                saved_result.metadata["connection"] = conn.get_conn_name()
             else:
-                saved_result = result_set
+                fork_table_id = result_set.fork_table_id
+                saved_result = result_set.fork_result(0)
+                saved_result.feedback_info = []
                 saved_result._update(raw_query_result)
 
-            if not connection_string and Connection.connections:
-                saved_result.conn_info = self._get_connection_info(**options)
-
-            saved_result.start_time = start_time
-            saved_result.end_time = end_time
-            saved_result.elapsed_timespan = elapsed_timespan
-            self.shell.user_ns.update({ options.get('last_raw_result_var', self.last_raw_result_var) : saved_result })
-
             result = saved_result
-            if options.get('feedback', self.feedback):
-                minutes, seconds = divmod(elapsed_timespan, 60)
-                saved_result.feedback_info.append('Done ({:0>2}:{:06.3f}): {} records'.format(int(minutes), seconds, saved_result.records_count))
 
-            logger().debug("Results: {} x {}".format(len(saved_result), len(saved_result.columns_name)))
+            if not connection_string and Connection.connections:
+                saved_result.metadata["conn_info"] = self._get_connection_info(**options)
+            else:
+                saved_result.metadata["conn_info"] = []
+
+            saved_result.metadata["start_time"] = start_time
+            saved_result.metadata["end_time"] = end_time
+
+            if options.get('feedback', self.feedback):
+                minutes, seconds = divmod(end_time - start_time, 60)
+                saved_result.feedback_info.append('Done ({:0>2}:{:06.3f}): {} records'.format(int(minutes), seconds, saved_result.records_count))
 
             if options.get('columns_to_local_vars', self.columns_to_local_vars):
                 #Instead of returning values, set variables directly in the
                 #users namespace. Variable names given by column names
 
                 if options.get('feedback', self.feedback):
-                    saved_result.feedback_info.append('Returning raw data to local variables [{}]'.format(', '.join(saved_result.columns_name)))
+                    saved_result.feedback_info.append('Returning raw data to local variables')
 
                 self.shell.user_ns.update(saved_result.to_dict())
                 result = None
@@ -452,17 +453,27 @@ class Kqlmagic(Magics, Configurable):
                 self.shell.user_ns.update({result_var: result if result is not None else saved_result})
                 result = None
 
-            if result is None:
-                return None
+            saved_result.suppress_result = False
+            saved_result.display_info = False
+            if result is not None:
+                if suppress_results:
+                    saved_result.suppress_result = True
+                elif options.get('auto_dataframe', self.auto_dataframe):
+                    Display.showSuccessMessage(saved_result.feedback_info)
+                else:
+                    saved_result.display_info = True
 
-            if suppress_results:
-                saved_result.suppress_result = True
-            elif options.get('auto_dataframe', self.auto_dataframe):
-                Display.showSuccessMessage(saved_result.feedback_info)
+
+            if result_set is None:
+                saved_result._create_fork_results()
             else:
-                saved_result.display_info = True
+                saved_result._update_fork_results()
 
             # Return results into the default ipython _ variable
+            self.shell.user_ns.update({ options.get('last_raw_result_var', self.last_raw_result_var) : saved_result })
+
+            if result == saved_result:
+                result = saved_result.fork_result(fork_table_id)
             return result
 
         except Exception as e:

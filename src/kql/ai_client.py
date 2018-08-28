@@ -123,6 +123,8 @@ class AppinsightsResponseTable(object):
         """ Returns iterator to get rows from response """
         # TODO: we called this fethall to resemble Python DB API,
         # but this can be as easily called result or similar
+        self.next = 0
+        self.last = len(self.rows)
         return self.__iter__()
 
 

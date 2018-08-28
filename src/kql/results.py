@@ -1,3 +1,4 @@
+import copy
 import functools
 import operator
 import csv
@@ -110,40 +111,45 @@ class ResultSet(list, ColumnGuesserMixin):
     """
 
     # Object constructor
-    def __init__(self, queryResult, query, fork_table_id, fork_table_resultSets, options):
+    def __init__(self, queryResult, query, fork_table_id, fork_table_resultSets, metadata, options):
 
         self.current_colors_palette = ['rgb(184, 247, 212)', 'rgb(111, 231, 219)', 'rgb(127, 166, 238)', 'rgb(131, 90, 241)']
 
-        self.queryResult = queryResult
         self.query = query
+        self.fork_table_id = fork_table_id
+        self._fork_table_resultSets = fork_table_resultSets
         self.options = options
 
-        self.fork_table_id = fork_table_id
-        self.fork_table_resultSets = fork_table_resultSets
-
-        self.fork_table_resultSets[str(self.fork_table_id)] = self
-
         # set by caller
+        self.metadata = metadata
         self.feedback_info = []
-        # set by caller
-        self.conn_info = []
-
-
-        # Kqlmagic metadata
-        self.start_time = None
-        self.end_time = None
-        self.elapsed_timespan = None
-        self.connection = None
 
         # table printing style to any of prettytable's defined styles (currently DEFAULT, MSWORD_FRIENDLY, PLAIN_COLUMNS, RANDOM)
         self.prettytable_style = prettytable.__dict__[self.options.get("prettytable_style", "DEFAULT").upper()]
 
-        self.display_info = False
+        self.display_info = True
         self.suppress_result = False
 
         self._update(queryResult)
 
+    @property
+    def connection(self):
+        return self.metadata.get("connection")
+
+    @property
+    def start_time(self):
+        return self.metadata.get("start_time")
+
+    @property
+    def end_time(self):
+        return self.metadata.get("end_time")
+
+    @property
+    def elapsed_timespan(self):
+        return self.end_time - self.start_time
+
     def _update(self, queryResult):
+        self._queryResult = queryResult
         self._completion_query_info = queryResult.completion_query_info
         self._completion_query_resource_consumption = queryResult.completion_query_resource_consumption
         self._json_response = queryResult.json_response
@@ -159,7 +165,7 @@ class ResultSet(list, ColumnGuesserMixin):
         self.title = queryResultTable.visualization_property("Title")
         # table
         auto_limit = 0 if not self.options.get("auto_limit") else self.options.get("auto_limit")
-        if queryResultTable.returns_rows:
+        if queryResultTable.returns_rows():
             if auto_limit > 0:
                 list.__init__(self, queryResultTable.fetchmany(size = auto_limit))
             else:
@@ -168,13 +174,31 @@ class ResultSet(list, ColumnGuesserMixin):
         else:
             list.__init__(self, [])
 
+        self._fork_table_resultSets[str(self.fork_table_id)] = self
+
+    def _create_fork_results(self):
+        if self.fork_table_id == 0 and len(self._fork_table_resultSets) == 1:
+            for fork_table_id in range(1, len(self._queryResult.tables)):
+                r = ResultSet(self._queryResult, self.query, fork_table_id, self._fork_table_resultSets, self.metadata, self.options)
+                if r.options.get('feedback'):
+                    minutes, seconds = divmod(self.elapsed_timespan, 60)
+                    r.feedback_info.append('Done ({:0>2}:{:06.3f}): {} records'.format(int(minutes), seconds, r.records_count))
+
+    def _update_fork_results(self):
+        if self.fork_table_id == 0:
+            for r in self._fork_table_resultSets.values():
+                if r != self:
+                    r._update(self._queryResult)
+                    r.metadata = self.metadata
+                    r.display_info = True
+                    r.suppress_result = False
+                    r.feedback_info = []
+                    if r.options.get('feedback'):
+                        minutes, seconds = divmod(self.elapsed_timespan, 60)
+                        r.feedback_info.append('Done ({:0>2}:{:06.3f}): {} records'.format(int(minutes), seconds, r.records_count))
+
     def fork_result(self, fork_table_id=0):
-        result = None
-        if fork_table_id < len(self.queryResult.tables):
-            result = self.fork_table_resultSets.get(str(fork_table_id))
-            if result is None:
-                result = ResultSet(self.queryResult, query, fork_table_id, self.fork_table_resultSets, self.options)
-        return result
+        return self._fork_table_resultSets.get(str(fork_table_id))
 
     @property
     def raw_json(self):
@@ -192,7 +216,7 @@ class ResultSet(list, ColumnGuesserMixin):
     def _repr_html_(self):
         if not self.suppress_result:
             if self.display_info:
-                Display.showInfoMessage(self.conn_info)
+                Display.showInfoMessage(self.metadata.get("conn_info"))
 
             if self.is_chart():
                 self.show_chart(**self.options)
@@ -286,7 +310,7 @@ class ResultSet(list, ColumnGuesserMixin):
     def to_dataframe(self):
         "Returns a Pandas DataFrame instance built from the result set."
         if self._dataframe is None:
-            self._dataframe = self.queryResult.tables[self.fork_table_id].to_dataframe()
+            self._dataframe = self._queryResult.tables[self.fork_table_id].to_dataframe()
 
             # import pandas as pd
             # frame = pd.DataFrame(self, columns=(self and self.columns_name) or [])
@@ -295,19 +319,15 @@ class ResultSet(list, ColumnGuesserMixin):
 
     def submit(self):
         "display the chart that was specified in the query"
-        magic = self.magic
+        magic = self.metadata.get("magic")
         user_ns = magic.shell.user_ns.copy()
-        result = magic.execute_query(self.parsed, user_ns)
-        return result
+        return magic.execute_query(self.metadata.get("parsed"), user_ns)
 
     def refresh(self):
         "refresh the results of the query"
-        magic = self.magic
+        magic = self.metadata.get("magic")
         user_ns = magic.shell.user_ns.copy()
-        self.conn_info = []
-        self.info = []
-        result = magic.execute_query(self.parsed, user_ns, self)
-        return result
+        return magic.execute_query(self.metadata.get("parsed"), user_ns, self)
 
     def show_chart(self, **kwargs):
         "display the chart that was specified in the query"
