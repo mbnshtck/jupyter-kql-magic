@@ -1,7 +1,11 @@
 Kusto QuickStart
+
 .. image:: https://mybinder.org/badge.svg :target: https://mybinder.org/v2/gh/mbnshtck/jupyter-kql-magic/master?filepath=notebooks%2FQuickStart.ipynb
+
 ApplicationInsight QuickStart
+
 .. image:: https://mybinder.org/badge.svg :target: https://mybinder.org/v2/gh/mbnshtck/jupyter-kql-magic/master?filepath=notebooks%2FQuickStartAI.ipynb
+
 ===========
 jupyter-Kqlmagic
 
