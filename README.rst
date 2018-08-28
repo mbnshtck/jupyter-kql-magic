@@ -1,3 +1,7 @@
+Kusto QuickStart
+.. image:: https://mybinder.org/badge.svg :target: https://mybinder.org/v2/gh/mbnshtck/jupyter-kql-magic/master?filepath=notebooks%2FQuickStart.ipynb
+ApplicationInsight QuickStart
+.. image:: https://mybinder.org/badge.svg :target: https://mybinder.org/v2/gh/mbnshtck/jupyter-kql-magic/master?filepath=notebooks%2FQuickStartAI.ipynb
 ===========
 jupyter-Kqlmagic
 
@@ -7,6 +11,7 @@ Extension (Magic) to Jupyter notebook and Jupyter lab, that enable notebook expe
 :Author: Michael Binshtock, mbnshtck@gmail.com
 
 Introduces a %kql (or %%kql) magic.
+
 
 Connect to kusto, using a connect strings, then issue KQL
 commands within IPython or IPython Notebook.

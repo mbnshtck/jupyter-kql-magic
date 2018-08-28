@@ -156,3 +156,8 @@ prefix = "C:\\Users\\michabin\\AppData\\Roaming\\npm"
 ; cwd = C:\Users\michabin
 ; HOME = C:\Users\michabin
 ; "npm config ls -l" to show all defaults.
+MyBinder:
+Kusto QuickStart
+https://mybinder.org/v2/gh/mbnshtck/jupyter-kql-magic/master?filepath=notebooks%2FQuickStart.ipynb
+ApplicationInsight
+https://mybinder.org/v2/gh/mbnshtck/jupyter-kql-magic/master?filepath=notebooks%2FQuickStartAI.ipynb
