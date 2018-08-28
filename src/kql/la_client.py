@@ -1,6 +1,6 @@
 from datetime import timedelta, datetime
 import re
-
+import json
 import adal 
 import dateutil.parser
 import requests
@@ -136,7 +136,16 @@ class LoganalyticsResponse(object):
 
     def __init__(self, json_response):
         self.json_response = json_response
-        self.primary_results = [LoganalyticsResponseTable(self.json_response['Tables'][0])]
+        self.primary_results = []
+        tables_num = self.json_response['Tables'].__len__()
+        last_table = self.json_response['Tables'][tables_num - 1]
+        for r in last_table['Rows']:
+            if r[2] == "GenericResult" or r[2] == "PrimaryResult":
+                t = self.json_response['Tables'][r[0]]
+                self.primary_results.append(AppinsightsResponseTable(t))
+        if len(self.primary_results) == 0:
+            t = self.json_response['Tables'][0]
+            self.primary_results.append(AppinsightsResponseTable(t))
 
     @property
     def visualization_results(self):
@@ -151,12 +160,30 @@ class LoganalyticsResponse(object):
 
     @property
     def completion_query_info_results(self):
-        # todo: implement it
+        tables_num = self.json_response['Tables'].__len__()
+        last_table = self.json_response['Tables'][tables_num - 1]
+        for r in last_table['Rows']:
+            if r[2] == "QueryStatus":
+                t = self.json_response['Tables'][r[0]]
+                for sr in t['Rows']:
+                    if sr[2] == 'Info':
+                        info =  {"StatusCode" : sr[3], "StatusDescription" : sr[4], "Count" : sr[5]}
+                        # print('Info: {}'.format(info))
+                        return info
         return {}
 
     @property
     def completion_query_resource_consumption_results(self):
-        # todo: implement it
+        tables_num = self.json_response['Tables'].__len__()
+        last_table = self.json_response['Tables'][tables_num - 1]
+        for r in last_table['Rows']:
+            if r[2] == "QueryStatus":
+                t = self.json_response['Tables'][r[0]]
+                for sr in t['Rows']:
+                    if sr[2] == 'Stats':
+                        stats = sr[4]
+                        # print('stats: {}'.format(stats))
+                        return json.loads(stats)
         return {}
 
     def get_raw_response(self):
