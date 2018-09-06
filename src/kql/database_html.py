@@ -177,6 +177,6 @@ class Database_html(object):
     @staticmethod
     def popup_schema(file_path, conn_name):
         if file_path:
-            botton_text = 'popup schema ' + conn_name
+            button_text = 'popup schema ' + conn_name
             window_name = conn_name.replace('@','_at_') + '_schema'
-            Display.show_window(window_name, file_path, botton_text)
+            Display.show_window(window_name, file_path, button_text = button_text, onclick_visibility ='visible')

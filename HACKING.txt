@@ -111,7 +111,7 @@ Sharing notebook via gist
     - paste the content of the file
     - give it a name with extension .ipynb
     - add description
-    - publish by clicking the "Create Public Gist" botton 
+    - publish by clicking the "Create Public Gist" button 
         ** it will give it a url with anumber 
 
  - View the notebook with nbviewer

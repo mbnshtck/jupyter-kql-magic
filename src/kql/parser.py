@@ -2,6 +2,8 @@ from os.path import expandvars
 import six
 from six.moves import configparser as CP
 from kql.log  import Logger, logger
+from traitlets import Bool, Int, Unicode, Enum, Float, TraitError
+
 
 
 class Parser(object):
@@ -178,6 +180,14 @@ class Parser(object):
                   'ps': {"abbreviation" : "popup_schema"},
                   'popup_schema': {"flag" : "popup_schema", "type" : "bool", "init" : "False"},
 
+                  'pc': {"abbreviation" : "palette_colors"},
+                  'palette_colors': {"flag" : "palette_colors", "type" : "int", "config" : "config.palette_colors"},
+
+                  'pd': {"abbreviation" : "palette_desaturation"},
+                  'palette_desaturation': {"flag" : "palette_desaturation", "type" : "float", "config" : "config.palette_desaturation"},
+
+                  'pn': {"abbreviation" : "palette_name"},
+                  'palette_name': {"flag" : "palette_name", "type" : "str", "config" : "config.palette_name"},
 
                   'showfiles_folder_name': {"flag" : "auto_popup_schema", "readonly" : "True", "config" : "config.showfiles_folder_name"},
                   'notebook_app': {"flag" : "notebook_app", "readonly" : "True", "config" : "config.notebook_app"},
@@ -186,6 +196,11 @@ class Parser(object):
 
 
                   'version': {"flag" : "version", "type": "bool", "init" : "False"},
+                  'palette': {"flag" : "palette", "type": "bool", "init" : "False"},
+                  'popup_palettes': {"flag" : "popup_palettes", "type": "bool", "init" : "False"},
+                  'pr': {"abbreviation" : "palette_reverse"},
+                  'palette_reverse': {"flag" : "palette_reverse", "type": "bool", "init" : "False"},
+
                   }
 
         for value in options_table.values():
@@ -202,12 +217,17 @@ class Parser(object):
         num_words = len(words)
         trimmed_kql = code
         first_word = 0
+
+        if num_words - first_word >= 2 and words[first_word + 1] == '<<':
+            options['result_var'] = words[first_word]
+            trimmed_kql = trimmed_kql[trimmed_kql.find('<<')+2:]
+            first_word += 2
+
         state = "bool"
-        for word in words:
+        for word in words[first_word:]:
             if state == "bool":
                 if not word[0].startswith('-'):
                     break
-                first_word += 1
                 word = word[1:]
                 trimmed_kql = trimmed_kql[trimmed_kql.find('-')+1:]
                 bool_value = True
@@ -223,6 +243,7 @@ class Parser(object):
                         obj = options_table.get(obj.get("abbreviation"))
                     type = obj.get("type")
                     key = obj.get("flag")
+                    option_config = obj.get("config")
                     if type == "bool":
                         options[key] = bool_value
                         trimmed_kql = trimmed_kql[trimmed_kql.find(word)+len(word):]
@@ -235,18 +256,29 @@ class Parser(object):
                 trimmed_kql = trimmed_kql[trimmed_kql.find(word)+len(word):]
                 options[key] = int(word)
                 state = "bool"
+            elif state == "float":
+                if not bool_value:
+                    raise ValueError('option {0} cannot be negated'.format(word))
+                trimmed_kql = trimmed_kql[trimmed_kql.find(word)+len(word):]
+                options[key] = float(word)
+                state = "bool"
             elif state == "str":
                 trimmed_kql = trimmed_kql[trimmed_kql.find(word)+len(word):]
                 if not bool_value:
                     word = "!" + word
                 options[key] = word
                 state = "bool"
+            first_word += 1
+
+            # validate using config traits
+            if state == "bool" and option_config is not None:
+                template = "'{0}'" if type == 'str' else "{0}"
+                saved = eval(option_config)
+                exec(option_config + '=' + template.format(str(options[key]).replace("'", "\\'")))
+                exec(option_config + '=' + template.format(str(saved).replace("'", "\\'")))
+
         if state != "bool":
             raise ValueError('bad options syntax')
-
-        if num_words - first_word >= 2 and words[first_word + 1] == '<<':
-            options['result_var'] = words[first_word]
-            trimmed_kql = trimmed_kql[trimmed_kql.find('<<')+2:]
 
         if num_words - first_word > 0:
             last_word = words[-1].strip()

@@ -12,12 +12,13 @@ from kql.column_guesser import ColumnGuesserMixin
 
 from kql.display import Display
 
+from kql.palette import Palette, Palettes
+
 import plotly
 plotly.offline.init_notebook_mode(connected=True)
 
 import plotly.plotly as py
 import plotly.graph_objs as go
-
 
 
 def _unduplicate_field_names(field_names):
@@ -109,11 +110,10 @@ class ResultSet(list, ColumnGuesserMixin):
 
     Can access rows listwise, or by string value of leftmost column.
     """
-
     # Object constructor
     def __init__(self, queryResult, query, fork_table_id, fork_table_resultSets, metadata, options):
 
-        self.current_colors_palette = ['rgb(184, 247, 212)', 'rgb(111, 231, 219)', 'rgb(127, 166, 238)', 'rgb(131, 90, 241)']
+#         self.current_colors_palette = ['rgb(184, 247, 212)', 'rgb(111, 231, 219)', 'rgb(127, 166, 238)', 'rgb(131, 90, 241)']
 
         self.query = query
         self.fork_table_id = fork_table_id
@@ -131,6 +131,29 @@ class ResultSet(list, ColumnGuesserMixin):
         self.suppress_result = False
 
         self._update(queryResult)
+
+
+    def _get_palette(self, n_colors=None, desaturation=None):
+        name = self.options.get('palette_name')
+        length = max(n_colors or 10, self.options.get('palette_colors') or 10)
+        self.metadata["palette"] = Palette(palette_name=name, n_colors=length, desaturation=desaturation or self.options.get('palette_desaturation'), to_reverse = self.options.get('palette_reverse'))
+        return self.palette
+
+    def get_color_from_palette(self, idx, n_colors=None, desaturation=None):
+        palette = self.palette or self._get_palette(n_colors, desaturation)
+        if idx < len(palette):
+            return str(palette[idx])
+        return None
+
+    @property
+    def palette(self):
+        return self.metadata.get("palette")
+
+    @property
+    def palettes(self):
+        return Palettes(
+                n_colors=self.options.get('palette_colors'), 
+                desaturation=self.options.get('palette_desaturation'))
 
     @property
     def connection(self):
@@ -258,8 +281,8 @@ class ResultSet(list, ColumnGuesserMixin):
         else:
             t = self._getTableHtml()
             html = Display.toHtml(**t)
-        if options.get("popup_window") and not options.get("botton_text"):
-            options["botton_text"] = 'popup ' + 'table'            + ((' - ' + self.title) if self.title else '') + ' '
+        if options.get("popup_window") and not options.get("button_text"):
+            options["button_text"] = 'popup ' + 'table'            + ((' - ' + self.title) if self.title else '') + ' '
         Display.show(html, **options)
         return None
 
@@ -333,8 +356,8 @@ class ResultSet(list, ColumnGuesserMixin):
         "display the chart that was specified in the query"
         options = {**self.options, **kwargs}
         window_mode = options is not None and options.get("popup_window")
-        if window_mode and not options.get("botton_text"):
-            options["botton_text"] = 'popup ' + self.visualization + ((' - ' + self.title) if self.title else '') + ' '
+        if window_mode and not options.get("button_text"):
+            options["button_text"] = 'popup ' + self.visualization + ((' - ' + self.title) if self.title else '') + ' '
         c = self._getChartHtml(window_mode)
         if c is not None:
             if c.get("body") or c.get("head"):
@@ -710,17 +733,6 @@ class ResultSet(list, ColumnGuesserMixin):
         plt.show()
         return plot
 
-    def get_colors_palette(self):
-        return self.current_colors_palette
-
-    def get_color_from_palette(self, idx):
-        if self.current_colors_palette is None:
-            return None
-        if idx < len(self.current_colors_palette):
-            return self.current_colors_palette[idx]
-        return None
-
-
     def _render_areachart_plotly(self, key_word_sep=" ", title=None, **kwargs):
         """Generates a pylab plot from the result set.
 
@@ -749,7 +761,7 @@ class ResultSet(list, ColumnGuesserMixin):
         ys = quantity_columns
         ylabel = ", ".join([c.name for c in ys])
         xlabel = xticks.name
-        data = [go.Scatter(x=xticks,y=yticks,name=yticks.name,mode='lines',line=dict(width=0.5,color=self.get_color_from_palette(idx)),fill='tozerox') for idx, yticks in enumerate(ys)]
+        data = [go.Scatter(x=xticks,y=yticks,name=yticks.name,mode='lines',line=dict(width=0.5,color=self.get_color_from_palette(idx, n_colors = len(ys))),fill='tozerox') for idx, yticks in enumerate(ys)]
         layout = go.Layout(
             title = title or "areachart",
             showlegend=True,
@@ -803,7 +815,7 @@ class ResultSet(list, ColumnGuesserMixin):
             ys_stcks.append(y_stck)
         ylabel = ", ".join([c.name for c in ys])
         xlabel = xticks.name
-        data = [go.Scatter(x=xticks,y=yticks,name=ys[idx].name,mode='lines',line=dict(width=0.5,color=self.get_color_from_palette(idx)),fill='tonexty') for idx, yticks in enumerate(ys_stcks)]
+        data = [go.Scatter(x=xticks,y=yticks,name=ys[idx].name,mode='lines',line=dict(width=0.5,color=self.get_color_from_palette(idx, n_colors = len(ys_stcks))),fill='tonexty') for idx, yticks in enumerate(ys_stcks)]
         layout = go.Layout(
             title = title or "stackedareachart",
             showlegend=True,
@@ -858,7 +870,7 @@ class ResultSet(list, ColumnGuesserMixin):
                                 name = yticks.name,
                                 line=dict(
                                     width=0.5,
-                                    color=self.get_color_from_palette(idx)
+                                    color=self.get_color_from_palette(idx, n_colors = len(ys))
                                 ),
                                 opacity = 0.8
                           ) 
@@ -924,7 +936,8 @@ class ResultSet(list, ColumnGuesserMixin):
         ys = quantity_columns
         ylabel = ", ".join([c.name for c in ys])
         xlabel = xticks.name
-        data = [go.Pie(labels=xticks, values=yticks, domain=domains[idx], marker=dict(colors=self.get_colors_palette()), name=yticks.name, textinfo='label+percent') for idx, yticks in enumerate(ys)]
+        palette = self._get_palette(n_colors=len(xticks))
+        data = [go.Pie(labels=xticks, values=yticks, domain=domains[idx], marker=dict(colors=palette), name=yticks.name, textinfo='label+percent') for idx, yticks in enumerate(ys)]
         layout = go.Layout(
             title = title or "piechart",
             showlegend=True,
@@ -964,7 +977,7 @@ class ResultSet(list, ColumnGuesserMixin):
         ys = quantity_columns
         ylabel = ", ".join([c.name for c in ys])
         xlabel = xticks.name
-        data = [go.Bar(x=yticks, y=xticks, marker=dict(color=self.get_color_from_palette(idx)), name=yticks.name, orientation = 'h') for idx, yticks in enumerate(ys)]
+        data = [go.Bar(x=yticks, y=xticks, marker=dict(color=self.get_color_from_palette(idx, n_colors = len(ys))), name=yticks.name, orientation = 'h') for idx, yticks in enumerate(ys)]
         layout = go.Layout(
             title = title or "barchart",
             showlegend=True,
@@ -994,7 +1007,7 @@ class ResultSet(list, ColumnGuesserMixin):
         ys = quantity_columns
         ylabel = ", ".join([c.name for c in ys])
         xlabel = xticks.name
-        data = [go.Bar(x=xticks, y=yticks, marker=dict(color=self.get_color_from_palette(idx)), name=yticks.name) for idx, yticks in enumerate(ys)]
+        data = [go.Bar(x=xticks, y=yticks, marker=dict(color=self.get_color_from_palette(idx, n_colors = len(ys))), name=yticks.name) for idx, yticks in enumerate(ys)]
         layout = go.Layout(
             title = title or "columnchart",
             showlegend=True,
@@ -1049,7 +1062,7 @@ class ResultSet(list, ColumnGuesserMixin):
                                 name = yticks.name,
                                 line=dict(
                                     width=1,
-                                    color=self.get_color_from_palette(idx)
+                                    color=self.get_color_from_palette(idx, n_colors = len(ys))
                                 ),
                                 opacity = 0.8
                           ) 
@@ -1103,7 +1116,7 @@ class ResultSet(list, ColumnGuesserMixin):
 
         ylabel = ", ".join([c.name for c in ys])
         xlabel = xticks.name
-        data = [go.Scatter(x=xticks,y=yticks,name=yticks.name,mode='markers',marker=dict(line=dict(width=1),color=self.get_color_from_palette(idx))) for idx, yticks in enumerate(ys)]
+        data = [go.Scatter(x=xticks,y=yticks,name=yticks.name,mode='markers',marker=dict(line=dict(width=1),color=self.get_color_from_palette(idx, n_colors = len(ys)))) for idx, yticks in enumerate(ys)]
         layout = go.Layout(
             title = title or "scatterchart",
             showlegend=True,

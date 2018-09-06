@@ -31,7 +31,7 @@ INSTALL_REQUIRES    = [
                         'azure-kusto-ingest>=0.0.10',
                         'adal>=1.0',
                         'Pygments>=2.2.0',
-                        'colorlover>=0.2.1',
+                        'seaborn>=0.9.0'
                         'requests',
                         'python-dateutil',
                         'six',

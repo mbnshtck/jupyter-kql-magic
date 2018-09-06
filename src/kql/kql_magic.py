@@ -12,7 +12,7 @@ from IPython.core.magics.display import Javascript
 
 
 from traitlets.config.configurable import Configurable
-from traitlets import Bool, Int, Unicode, Enum
+from traitlets import Bool, Int, Float, Unicode, Enum, TraitError, validate
 
 from kql.version import VERSION
 from kql.connection import Connection
@@ -29,6 +29,8 @@ from kql.database_html  import Database_html
 from kql.help_html import Help_html
 from kql.kusto_engine import KustoEngine
 from kql.kql_engine import KqlEngineError
+from kql.palette import Palettes, Palette
+
 
 
 
@@ -62,17 +64,44 @@ class Kqlmagic(Magics, Configurable):
     auto_popup_schema = Bool(True, config=True, help="Popup schema when connecting to a new database. Abbreviation: aps")
 
     json_display = Enum(['raw', 'native', 'formatted'], 'formatted', config=True, help="Set json/dict display format. Abbreviation: jd")
+    palette_name = Unicode(Palettes.DEFAULT_NAME, config=True, help="Set pallete by name to be used for charts. Abbreviation: pn")
+    palette_colors = Int(Palettes.DEFAULT_N_COLORS, config=True, help="Set pallete number of colors to be used for charts. Abbreviation: pc")
+    palette_desaturation = Float(Palettes.DEFAULT_DESATURATION, config=True, help="Set pallete desaturation to be used for charts. Abbreviation: pd")
 
     showfiles_folder_name = Unicode('temp_showfiles', config=True, help="Set the name of folder for temporary popup files")
 
     # valid values: jupyterlab or jupyternotebook
     notebook_app = Enum(['jupyterlab', 'jupyternotebook'], 'jupyternotebook', config=True, help="Set notebook application used.")
-    add_kql_ref_to_help = Bool(True, config=True, help="On Kqlmagic load auto add kql reference to Help menu.")
 
+    add_kql_ref_to_help = Bool(True, config=True, help="On Kqlmagic load auto add kql reference to Help menu.")
     add_schema_to_help = Bool(True, config=True, help="On connection to database@cluster add  schema to Help menu.")
 
+    @validate('palette_name')
+    def _valid_value_palette_name(cls, proposal):
+        try:
+            Palette.validate_palette_name(proposal['value'])
+        except AttributeError as e:
+            message = 'The \'palette_name\' trait of a Kqlmagic instance ' + str(e)
+            raise TraitError(message)
+        return proposal['value']
 
+    @validate('palette_desaturation')
+    def _valid_value_palette_desaturation(cls, proposal):
+        try:
+            Palette.validate_palette_desaturation(proposal['value'])
+        except AttributeError as e:
+            message = 'The \'palette_desaturation\' trait of a Kqlmagic instance ' + str(e)
+            raise TraitError(message)
+        return proposal['value']
 
+    @validate('palette_colors')
+    def _valid_value_palette_color(cls, proposal):
+        try:
+            Palette.validate_palette_colors(proposal['value'])
+        except AttributeError as e:
+            message = 'The \'palette_color\' trait of a Kqlmagic instance ' + str(e)
+            raise TraitError(message)
+        return proposal['value']
 
     # [KUSTO]
     # Driver          = Easysoft ODBC-SQL Server
@@ -262,6 +291,7 @@ class Kqlmagic(Magics, Configurable):
 
         logger().debug("To Parsed: \n\rline: {}\n\rcell:\n\r{}".format(line, cell))
         try:
+            parsed = None
             parsed_queries = Parser.parse('%s\n%s' % (line, cell), self)
             logger().debug("Parsed: {}".format(parsed_queries))
             result = None
@@ -308,8 +338,40 @@ class Kqlmagic(Magics, Configurable):
         suppress_results = options.get('suppress_results', False) and options.get('enable_suppress_result', self.enable_suppress_result)
         connection_string = parsed['connection']
 
+        special_info = False
         if options.get('version'):
             print('Kqlmagic version: ' + VERSION)
+            special_info = True
+
+        if options.get('palette'):
+            palette = Palette(
+                palette_name=options.get('palette_name', self.palette_name), 
+                n_colors=options.get('palette_colors',self.palette_colors),
+                desaturation=options.get('palette_desaturation', self.palette_desaturation),
+                to_reverse=options.get('palette_reverse', False))
+            html_str = palette._repr_html_()
+            Display.show(html_str)
+            special_info = True
+
+        if options.get('popup_palettes'):
+            n_colors = options.get('palette_colors',self.palette_colors)
+            desaturation=options.get('palette_desaturation', self.palette_desaturation)
+            palettes = Palettes(
+                n_colors=n_colors, 
+                desaturation=desaturation)
+            html_str = palettes._repr_html_()
+            button_text='popup {0} colors palettes'.format(n_colors)
+            file_name='{0}_colors_palettes'.format(n_colors) 
+            if desaturation is not None and desaturation != 1.0 and desaturation != 0:
+                file_name += '_desaturation{0}'.format(str(desaturation))
+                button_text += ' (desaturation {0})'.format(str(desaturation))
+            file_path = Display._html_to_file_path(html_str, file_name, **options)
+            Display.show_window(
+                file_name, 
+                file_path, 
+                button_text = button_text,
+                onclick_visibility ='visible')
+            special_info = True
 
         if options.get('popup_help'):
             help_url = 'http://aka.ms/kdocs'
@@ -321,7 +383,11 @@ class Kqlmagic(Magics, Configurable):
             # html = f.text.replace('width=device-width','width=500')
             # Display.show(html, **{"popup_window" : True, 'name': 'KustoQueryLanguage'})
             button_text = 'popup kql help '
-            Display.show_window('KustoQueryLanguage', help_url, button_text)
+            Display.show_window('KustoQueryLanguage', help_url, button_text, onclick_visibility ='visible')
+            special_info = True
+
+        if special_info and not query and not connection_string:
+            return None
 
         try:
             #

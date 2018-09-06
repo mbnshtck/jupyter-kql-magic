@@ -78,14 +78,14 @@ class Display(object):
             if kwargs is not None and kwargs.get('popup_window', False):
                 file_name = Display._get_name(**kwargs)
                 file_path = Display._html_to_file_path(html_str, file_name, **kwargs)
-                Display.show_window(file_name, file_path, kwargs.get('botton_text'), **kwargs)
+                Display.show_window(file_name, file_path, **kwargs)
             else:
                 # print(HTML(html_str)._repr_html_())
                 display(HTML(html_str))
 
     @staticmethod
-    def show_window(window_name, file_path, button_text = None, **kwargs):
-        html_str = Display._get_window_html(window_name,file_path, button_text, **kwargs)
+    def show_window(window_name, file_path, button_text=None, onclick_visibility=None, **kwargs):
+        html_str = Display._get_window_html(window_name, file_path, button_text, onclick_visibility, **kwargs)
         display(HTML(html_str))
 
     @staticmethod
@@ -111,21 +111,22 @@ class Display(object):
 
     @staticmethod
     def _get_name(**kwargs):
-        if kwargs is not None and isinstance(kwargs.get('name'), str) and len(kwargs.get('name')) > 0:
-            name = kwargs.get('name')
+        if kwargs is not None and isinstance(kwargs.get('file_name'), str) and len(kwargs.get('file_name')) > 0:
+            name = kwargs.get('file_name')
         else:
             name = uuid.uuid4().hex
         return name
 
     @staticmethod
-    def _get_window_html(window_name, file_path, button_text = None, **kwargs):
+    def _get_window_html(window_name, file_path, button_text = None, onclick_visibility=None, **kwargs):
         notebooks_host = Display.notebooks_host or ''
+        onclick_visibility = 'visible' if onclick_visibility == 'visible'else 'hidden'
         button_text = button_text or 'popup window'
         window_params = "fullscreen=no,directories=no,location=no,menubar=no,resizable=yes,scrollbars=yes,status=no,titlebar=no,toolbar=no,"
         html_str = """<!DOCTYPE html>
             <html><body>
 
-            <button onclick="this.style.visibility='hidden';kqlMagicLaunchWindowFunction('"""+file_path+"""','""" +window_params+ """','""" +window_name+ """','"""+notebooks_host+"""')">""" +button_text+ """</button>
+            <button onclick="this.style.visibility='""" +onclick_visibility+ """';kqlMagicLaunchWindowFunction('"""+file_path+"""','""" +window_params+ """','""" +window_name+ """','"""+notebooks_host+"""')">""" +button_text+ """</button>
 
             <script>
 

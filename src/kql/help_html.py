@@ -81,6 +81,7 @@ class Help_html(object):
                     break
             if not found:
                 help_links.append({'text': text, 'url': url})
+            # print('help_links: ' + str(help_links))
             if reconnect:
                 Help_html._reconnect(**kwargs)
         elif Help_html._pending_helps.get(text) is None:
