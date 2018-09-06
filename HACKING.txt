@@ -157,6 +157,8 @@ prefix = "C:\\Users\\michabin\\AppData\\Roaming\\npm"
 ; HOME = C:\Users\michabin
 ; "npm config ls -l" to show all defaults.
 MyBinder:
+github location: https://github.com/mbnshtck/jupyter-kql-magic
+notebooks/ColorYourCharts.ipynb
 Kusto QuickStart
 https://mybinder.org/v2/gh/mbnshtck/jupyter-kql-magic/master?filepath=notebooks%2FQuickStart.ipynb
 ApplicationInsight
