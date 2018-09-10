@@ -3,13 +3,15 @@
 
 from enum import Enum, unique
 from datetime import timedelta, datetime
+
 # import webbrowser
 from six.moves.urllib.parse import urlparse
 
 import dateutil.parser
 from adal import AuthenticationContext
 from adal.constants import TokenResponseFields, OAuth2DeviceCodeResponseParameters, AADConstants
-from kql.display  import Display
+from kql.display import Display
+
 
 @unique
 class AuthenticationMethod(Enum):
@@ -25,9 +27,7 @@ class _MyAadHelper(object):
     def __init__(self, kcsb):
         authority = kcsb.authority_id or "microsoft.com"
         self._kusto_cluster = "{0.scheme}://{0.hostname}".format(urlparse(kcsb.data_source))
-        self._adal_context = AuthenticationContext(
-            "https://{0}/{1}".format(AADConstants.WORLD_WIDE_AUTHORITY, authority)
-        )
+        self._adal_context = AuthenticationContext("https://{0}/{1}".format(AADConstants.WORLD_WIDE_AUTHORITY, authority))
         self._username = None
         if all([kcsb.aad_user_id, kcsb.password]):
             self._authentication_method = AuthenticationMethod.aad_username_password
@@ -38,13 +38,7 @@ class _MyAadHelper(object):
             self._authentication_method = AuthenticationMethod.aad_application_key
             self._client_id = kcsb.application_client_id
             self._client_secret = kcsb.application_key
-        elif all(
-            [
-                kcsb.application_client_id,
-                kcsb.application_certificate,
-                kcsb.application_certificate_thumbprint,
-            ]
-        ):
+        elif all([kcsb.application_client_id, kcsb.application_certificate, kcsb.application_certificate_thumbprint]):
             self._authentication_method = AuthenticationMethod.aad_application_certificate
             self._client_id = kcsb.application_client_id
             self._certificate = kcsb.application_certificate
@@ -55,9 +49,7 @@ class _MyAadHelper(object):
 
     def acquire_token(self):
         """Acquire tokens from AAD."""
-        token = self._adal_context.acquire_token(
-            self._kusto_cluster, self._username, self._client_id
-        )
+        token = self._adal_context.acquire_token(self._kusto_cluster, self._username, self._client_id)
         if token is not None:
             expiration_date = dateutil.parser.parse(token[TokenResponseFields.EXPIRES_ON])
             if expiration_date > datetime.now() + timedelta(minutes=1):
@@ -70,13 +62,9 @@ class _MyAadHelper(object):
                     return self._get_header(token)
 
         if self._authentication_method is AuthenticationMethod.aad_username_password:
-            token = self._adal_context.acquire_token_with_username_password(
-                self._kusto_cluster, self._username, self._password, self._client_id
-            )
+            token = self._adal_context.acquire_token_with_username_password(self._kusto_cluster, self._username, self._password, self._client_id)
         elif self._authentication_method is AuthenticationMethod.aad_application_key:
-            token = self._adal_context.acquire_token_with_client_credentials(
-                self._kusto_cluster, self._client_id, self._client_secret
-            )
+            token = self._adal_context.acquire_token_with_client_credentials(self._kusto_cluster, self._client_id, self._client_secret)
         elif self._authentication_method is AuthenticationMethod.aad_device_login:
             # print(code[OAuth2DeviceCodeResponseParameters.MESSAGE])
             # webbrowser.open(code[OAuth2DeviceCodeResponseParameters.VERIFICATION_URL])
@@ -87,12 +75,19 @@ class _MyAadHelper(object):
             url = code[OAuth2DeviceCodeResponseParameters.VERIFICATION_URL]
             device_code = code[OAuth2DeviceCodeResponseParameters.USER_CODE].strip()
 
-            html_str = """<!DOCTYPE html>
+            html_str = (
+                """<!DOCTYPE html>
                 <html><body>
 
-                <!-- h1 id="user_code_p"><b>""" +device_code+ """</b><br></h1-->
+                <!-- h1 id="user_code_p"><b>"""
+                + device_code
+                + """</b><br></h1-->
 
-                <input  id="kqlMagicCodeAuthInput" type="text" readonly style="font-weight: bold; border: none;" size = '""" +str(len(device_code))+ """' value='""" +device_code+ """'>
+                <input  id="kqlMagicCodeAuthInput" type="text" readonly style="font-weight: bold; border: none;" size = '"""
+                + str(len(device_code))
+                + """' value='"""
+                + device_code
+                + """'>
 
                 <button id='kqlMagicCodeAuth_button', onclick="this.style.visibility='hidden';kqlMagicCodeAuthFunction()">Copy code to clipboard and authenticate</button>
 
@@ -114,13 +109,16 @@ class _MyAadHelper(object):
                     var w = screen.width / 2;
                     var h = screen.height / 2;
                     params = 'width='+w+',height='+h
-                    kqlMagicUserCodeAuthWindow = window.open('""" +url+ """', 'kqlMagicUserCodeAuthWindow', params);
+                    kqlMagicUserCodeAuthWindow = window.open('"""
+                + url
+                + """', 'kqlMagicUserCodeAuthWindow', params);
 
                     // TODO: save selected cell index, so that the clear will be done on the lince cell
                 }
                 </script>
 
                 </body></html>"""
+            )
 
             Display.show(html_str)
             # webbrowser.open(code['verification_url'])
@@ -150,13 +148,8 @@ class _MyAadHelper(object):
                 self._kusto_cluster, self._client_id, self._certificate, self._thumbprint
             )
         else:
-            raise KustoClientError(
-                "Please choose authentication method from azure.kusto.data.security.AuthenticationMethod"
-            )
+            raise KustoClientError("Please choose authentication method from azure.kusto.data.security.AuthenticationMethod")
         return self._get_header(token)
 
     def _get_header(self, token):
-        return "{0} {1}".format(
-            token[TokenResponseFields.TOKEN_TYPE], token[TokenResponseFields.ACCESS_TOKEN]
-    )
-
+        return "{0} {1}".format(token[TokenResponseFields.TOKEN_TYPE], token[TokenResponseFields.ACCESS_TOKEN])

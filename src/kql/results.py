@@ -15,6 +15,7 @@ from kql.display import Display
 from kql.palette import Palette, Palettes
 
 import plotly
+
 plotly.offline.init_notebook_mode(connected=True)
 
 import plotly.plotly as py
@@ -27,11 +28,12 @@ def _unduplicate_field_names(field_names):
     for k in field_names:
         if k in res:
             i = 1
-            while k + '_' + str(i) in res:
+            while k + "_" + str(i) in res:
                 i += 1
-            k += '_' + str(i)
+            k += "_" + str(i)
         res.append(k)
     return res
+
 
 class UnicodeWriter(object):
     """
@@ -49,19 +51,16 @@ class UnicodeWriter(object):
 
     def writerow(self, row):
         if six.PY2:
-            _row = [s.encode("utf-8")
-                    if hasattr(s, "encode")
-                    else s
-                    for s in row]
+            _row = [s.encode("utf-8") if hasattr(s, "encode") else s for s in row]
         else:
             _row = row
         self.writer.writerow(_row)
         # Fetch UTF-8 output from the queue ...
         data = self.queue.getvalue()
         if six.PY2:
-           data = data.decode("utf-8")
-           # ... and reencode it into the target encoding
-           data = self.encoder.encode(data)
+            data = data.decode("utf-8")
+            # ... and reencode it into the target encoding
+            data = self.encoder.encode(data)
         # write to the target stream
         self.stream.write(data)
         # empty queue
@@ -72,6 +71,7 @@ class UnicodeWriter(object):
         for row in rows:
             self.writerow(row)
 
+
 class CsvResultDescriptor(object):
     """Provides IPython Notebook-friendly output for the feedback after a ``.csv`` called."""
 
@@ -81,13 +81,11 @@ class CsvResultDescriptor(object):
 
     # Printable unambiguous presentation of the object
     def __repr__(self):
-        return 'CSV results at %s' % os.path.join(os.path.abspath('.'), self.file_path)
+        return "CSV results at %s" % os.path.join(os.path.abspath("."), self.file_path)
 
     # IPython html presentation of the object
     def _repr_html_(self):
-        return '<a href="%s">CSV results</a>' % os.path.join('.', 'files', self.file_path)
-
-
+        return '<a href="%s">CSV results</a>' % os.path.join(".", "files", self.file_path)
 
 
 def _nonbreaking_spaces(match_obj):
@@ -97,11 +95,11 @@ def _nonbreaking_spaces(match_obj):
     Call with a ``re`` match object.  Retain group 1, replace group 2
     with nonbreaking speaces.
     """
-    spaces = '&nbsp;' * len(match_obj.group(2))
-    return '%s%s' % (match_obj.group(1), spaces)
+    spaces = "&nbsp;" * len(match_obj.group(2))
+    return "%s%s" % (match_obj.group(1), spaces)
 
-_cell_with_spaces_pattern = re.compile(r'(<td>)( {2,})')
 
+_cell_with_spaces_pattern = re.compile(r"(<td>)( {2,})")
 
 
 class ResultSet(list, ColumnGuesserMixin):
@@ -110,10 +108,11 @@ class ResultSet(list, ColumnGuesserMixin):
 
     Can access rows listwise, or by string value of leftmost column.
     """
+
     # Object constructor
     def __init__(self, queryResult, query, fork_table_id, fork_table_resultSets, metadata, options):
 
-#         self.current_colors_palette = ['rgb(184, 247, 212)', 'rgb(111, 231, 219)', 'rgb(127, 166, 238)', 'rgb(131, 90, 241)']
+        #         self.current_colors_palette = ['rgb(184, 247, 212)', 'rgb(111, 231, 219)', 'rgb(127, 166, 238)', 'rgb(131, 90, 241)']
 
         self.query = query
         self.fork_table_id = fork_table_id
@@ -132,11 +131,15 @@ class ResultSet(list, ColumnGuesserMixin):
 
         self._update(queryResult)
 
-
     def _get_palette(self, n_colors=None, desaturation=None):
-        name = self.options.get('palette_name')
-        length = max(n_colors or 10, self.options.get('palette_colors') or 10)
-        self.metadata["palette"] = Palette(palette_name=name, n_colors=length, desaturation=desaturation or self.options.get('palette_desaturation'), to_reverse = self.options.get('palette_reverse'))
+        name = self.options.get("palette_name")
+        length = max(n_colors or 10, self.options.get("palette_colors") or 10)
+        self.metadata["palette"] = Palette(
+            palette_name=name,
+            n_colors=length,
+            desaturation=desaturation or self.options.get("palette_desaturation"),
+            to_reverse=self.options.get("palette_reverse"),
+        )
         return self.palette
 
     def get_color_from_palette(self, idx, n_colors=None, desaturation=None):
@@ -151,9 +154,7 @@ class ResultSet(list, ColumnGuesserMixin):
 
     @property
     def palettes(self):
-        return Palettes(
-                n_colors=self.options.get('palette_colors'), 
-                desaturation=self.options.get('palette_desaturation'))
+        return Palettes(n_colors=self.options.get("palette_colors"), desaturation=self.options.get("palette_desaturation"))
 
     @property
     def connection(self):
@@ -190,7 +191,7 @@ class ResultSet(list, ColumnGuesserMixin):
         auto_limit = 0 if not self.options.get("auto_limit") else self.options.get("auto_limit")
         if queryResultTable.returns_rows():
             if auto_limit > 0:
-                list.__init__(self, queryResultTable.fetchmany(size = auto_limit))
+                list.__init__(self, queryResultTable.fetchmany(size=auto_limit))
             else:
                 list.__init__(self, queryResultTable.fetchall())
 
@@ -203,9 +204,9 @@ class ResultSet(list, ColumnGuesserMixin):
         if self.fork_table_id == 0 and len(self._fork_table_resultSets) == 1:
             for fork_table_id in range(1, len(self._queryResult.tables)):
                 r = ResultSet(self._queryResult, self.query, fork_table_id, self._fork_table_resultSets, self.metadata, self.options)
-                if r.options.get('feedback'):
+                if r.options.get("feedback"):
                     minutes, seconds = divmod(self.elapsed_timespan, 60)
-                    r.feedback_info.append('Done ({:0>2}:{:06.3f}): {} records'.format(int(minutes), seconds, r.records_count))
+                    r.feedback_info.append("Done ({:0>2}:{:06.3f}): {} records".format(int(minutes), seconds, r.records_count))
 
     def _update_fork_results(self):
         if self.fork_table_id == 0:
@@ -216,9 +217,9 @@ class ResultSet(list, ColumnGuesserMixin):
                     r.display_info = True
                     r.suppress_result = False
                     r.feedback_info = []
-                    if r.options.get('feedback'):
+                    if r.options.get("feedback"):
                         minutes, seconds = divmod(self.elapsed_timespan, 60)
-                        r.feedback_info.append('Done ({:0>2}:{:06.3f}): {} records'.format(int(minutes), seconds, r.records_count))
+                        r.feedback_info.append("Done ({:0>2}:{:06.3f}): {} records".format(int(minutes), seconds, r.records_count))
 
     def fork_result(self, fork_table_id=0):
         return self._fork_table_resultSets.get(str(fork_table_id))
@@ -233,7 +234,7 @@ class ResultSet(list, ColumnGuesserMixin):
 
     @property
     def completion_query_resource_consumption(self):
-        return  Display.to_styled_class(self._completion_query_resource_consumption, **self.options)
+        return Display.to_styled_class(self._completion_query_resource_consumption, **self.options)
 
     # IPython html presentation of the object
     def _repr_html_(self):
@@ -249,17 +250,16 @@ class ResultSet(list, ColumnGuesserMixin):
             if self.display_info:
                 Display.showInfoMessage(self.feedback_info)
 
-        # display info only once 
+        # display info only once
         self.display_info = False
 
-        # suppress results info only once 
+        # suppress results info only once
         self.suppress_result = False
-        return ''
-
+        return ""
 
     def _getTableHtml(self):
         "get query result in a table format as an HTML string"
-        _cell_with_spaces_pattern = re.compile(r'(<td>)( {2,})')
+        _cell_with_spaces_pattern = re.compile(r"(<td>)( {2,})")
         if self.pretty:
             self.pretty.add_rows(self)
             result = self.pretty.get_html_string()
@@ -267,38 +267,40 @@ class ResultSet(list, ColumnGuesserMixin):
             display_limit = 0 if not self.options.get("display_limit") else self.options.get("display_limit")
             if display_limit > 0 and len(self) > display_limit:
                 result = '%s\n<span style="font-style:italic;text-align:center;">%d rows, truncated to display_limit of %d</span>' % (
-                    result, len(self), display_limit)
-            return {"body" : result}
+                    result,
+                    len(self),
+                    display_limit,
+                )
+            return {"body": result}
         else:
             return {}
 
     def show_table(self, **kwargs):
         "display the table"
         options = {**self.options, **kwargs}
-        if options.get("table_package","").upper() == "PANDAS":
+        if options.get("table_package", "").upper() == "PANDAS":
             t = self.to_dataframe()._repr_html_()
-            html = Display.toHtml(body = t)
+            html = Display.toHtml(body=t)
         else:
             t = self._getTableHtml()
             html = Display.toHtml(**t)
         if options.get("popup_window") and not options.get("button_text"):
-            options["button_text"] = 'popup ' + 'table'            + ((' - ' + self.title) if self.title else '') + ' '
+            options["button_text"] = "popup " + "table" + ((" - " + self.title) if self.title else "") + " "
         Display.show(html, **options)
         return None
 
     def popup_table(self, **kwargs):
         "display the table in popup window"
-        return self.show_table(**{"popup_window" : True, **kwargs})
+        return self.show_table(**{"popup_window": True, **kwargs})
 
     def display_table(self, **kwargs):
         "display the table in cell"
-        return self.show_table(**{"popup_window" : False, **kwargs})
+        return self.show_table(**{"popup_window": False, **kwargs})
 
     # Printable pretty presentation of the object
     def __str__(self, *args, **kwargs):
         self.pretty.add_rows(self)
-        return str(self.pretty or '')
-
+        return str(self.pretty or "")
 
     # For iterator self[key]
     def __getitem__(self, key):
@@ -323,7 +325,6 @@ class ResultSet(list, ColumnGuesserMixin):
             return dict(zip(self.columns_name, zip(*self)))
         else:
             return dict(zip(self.columns_name, [() for c in self.columns_name]))
-
 
     def dicts_iterator(self):
         "Iterator yielding a dict for each row"
@@ -357,7 +358,7 @@ class ResultSet(list, ColumnGuesserMixin):
         options = {**self.options, **kwargs}
         window_mode = options is not None and options.get("popup_window")
         if window_mode and not options.get("button_text"):
-            options["button_text"] = 'popup ' + self.visualization + ((' - ' + self.title) if self.title else '') + ' '
+            options["button_text"] = "popup " + self.visualization + ((" - " + self.title) if self.title else "") + " "
         c = self._getChartHtml(window_mode)
         if c is not None:
             if c.get("body") or c.get("head"):
@@ -377,90 +378,98 @@ class ResultSet(list, ColumnGuesserMixin):
 
     def popup(self, **kwargs):
         "display the chart that was specified in the query"
-        return self.show_chart(**{"popup_window" : True, **kwargs})
+        return self.show_chart(**{"popup_window": True, **kwargs})
 
     def display(self, **kwargs):
         "display the chart that was specified in the query"
-        return self.show_chart(**{"popup_window" : False, **kwargs})
+        return self.show_chart(**{"popup_window": False, **kwargs})
 
     def is_chart(self):
-        return self.visualization and not self.visualization == 'table'
+        return self.visualization and not self.visualization == "table"
 
-    def _getChartHtml(self, window_mode = False):
+    def _getChartHtml(self, window_mode=False):
         "get query result in a char format as an HTML string"
         # https://kusto.azurewebsites.net/docs/queryLanguage/query_language_renderoperator.html
 
         if not self.is_chart():
             return None
 
-        if (len(self) == 0):
+        if len(self) == 0:
             id = uuid.uuid4().hex
-            head = """<style>#uuid-""" +id+ """ {
+            head = (
+                """<style>#uuid-"""
+                + id
+                + """ {
                 display: block; 
                 font-style:italic;
                 font-size:300%;
                 text-align:center;
             } </style>"""
+            )
 
-            body = '<div id="uuid-' +id+ '"><br><br>EMPTY CHART (no data)<br><br>.</div>'
-            return {"body" : body, "head": head}
+            body = '<div id="uuid-' + id + '"><br><br>EMPTY CHART (no data)<br><br>.</div>'
+            return {"body": body, "head": head}
 
         figure_or_data = None
         # First column is color-axis, second column is numeric
-        if self.visualization == 'piechart':
-            figure_or_data = self._render_piechart_plotly(" ", self.title) 
-            #chart = self._render_pie(" ", self.title)
+        if self.visualization == "piechart":
+            figure_or_data = self._render_piechart_plotly(" ", self.title)
+            # chart = self._render_pie(" ", self.title)
         # First column is x-axis, and can be text, datetime or numeric. Other columns are numeric, displayed as horizontal strips.
         # kind = default, unstacked, stacked, stacked100 (Default, same as unstacked; unstacked - Each "area" to its own; stacked - "Areas" are stacked to the right; stacked100 - "Areas" are stacked to the right, and stretched to the same width)
-        elif self.visualization == 'barchart':
+        elif self.visualization == "barchart":
             figure_or_data = self._render_barchart_plotly(" ", self.title)
             # chart = self._render_barh(" ", self.title)
         # Like barchart, with vertical strips instead of horizontal strips.
-        # kind = default, unstacked, stacked, stacked100 
-        elif self.visualization == 'columnchart':
+        # kind = default, unstacked, stacked, stacked100
+        elif self.visualization == "columnchart":
             figure_or_data = self._render_columnchart_plotly(" ", self.title)
             # chart = self._render_bar(" ", self.title)
-         # Area graph. First column is x-axis, and should be a numeric column. Other numeric columns are y-axes.
-         # kind = default, unstacked, stacked, stacked100 
-        elif self.visualization == 'areachart':
-            figure_or_data = self._render_areachart_plotly(" ", self.title) 
+        # Area graph. First column is x-axis, and should be a numeric column. Other numeric columns are y-axes.
+        # kind = default, unstacked, stacked, stacked100
+        elif self.visualization == "areachart":
+            figure_or_data = self._render_areachart_plotly(" ", self.title)
             # chart = self._render_areachart(" ", self.title)
         # Line graph. First column is x-axis, and should be a numeric column. Other numeric columns are y-axes.
-        elif self.visualization == 'linechart':
+        elif self.visualization == "linechart":
             figure_or_data = self._render_linechart_plotly(" ", self.title)
         # Line graph. First column is x-axis, and should be datetime. Other columns are y-axes.
-        elif self.visualization == 'timechart':
+        elif self.visualization == "timechart":
             figure_or_data = self._render_timechart_plotly(" ", self.title)
         # Similar to timechart, but highlights anomalies using an external machine-learning service.
-        elif self.visualization == 'anomalychart':
+        elif self.visualization == "anomalychart":
             figure_or_data = self._render_anomalychart_plotly(" ", self.title)
         # Stacked area graph. First column is x-axis, and should be a numeric column. Other numeric columns are y-axes.
-        elif self.visualization == 'stackedareachart':
+        elif self.visualization == "stackedareachart":
             figure_or_data = self._render_stackedareachart_plotly(" ", self.title)
         # Last two columns are the x-axis, other columns are y-axis.
-        elif self.visualization == 'ladderchart':
+        elif self.visualization == "ladderchart":
             figure_or_data = self.pie(" ", self.title)
         # Interactive navigation over the events time-line (pivoting on time axis)
-        elif self.visualization == 'timepivot':
+        elif self.visualization == "timepivot":
             figure_or_data = self.pie(" ", self.title)
         # Displays a pivot table and chart. User can interactively select data, columns, rows and various chart types.
-        elif self.visualization == 'pivotchart':
+        elif self.visualization == "pivotchart":
             figure_or_data = self.pie(" ", self.title)
         # Points graph. First column is x-axis, and should be a numeric column. Other numeric columns are y-axes
-        elif self.visualization == 'scatterchart':
+        elif self.visualization == "scatterchart":
             figure_or_data = self._render_scatterchart_plotly(" ", self.title)
 
         if figure_or_data is not None:
             if window_mode:
-                head = '<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>' if window_mode and not self.options.get("plotly_fs_includejs", False) else ""
-                body = plotly.offline.plot(figure_or_data, include_plotlyjs= window_mode and self.options.get("plotly_fs_includejs", False), output_type='div')
-                return {"body" : body, "head" : head}
+                head = (
+                    '<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>'
+                    if window_mode and not self.options.get("plotly_fs_includejs", False)
+                    else ""
+                )
+                body = plotly.offline.plot(
+                    figure_or_data, include_plotlyjs=window_mode and self.options.get("plotly_fs_includejs", False), output_type="div"
+                )
+                return {"body": body, "head": head}
             else:
-                plotly.offline.iplot(figure_or_data, filename='plotlychart')
+                plotly.offline.iplot(figure_or_data, filename="plotlychart")
                 return {}
         return None
-
-
 
     def pie(self, key_word_sep=" ", title=None, **kwargs):
         """Generates a pylab pie chart from the result set.
@@ -486,11 +495,11 @@ class ResultSet(list, ColumnGuesserMixin):
 
         self.build_columns()
         import matplotlib.pyplot as plt
+
         pie = plt.pie(self.columns[1], labels=self.columns[0], **kwargs)
         plt.title(title or self.columns[1].name)
         plt.show()
         return pie
-
 
     def plot(self, title=None, **kwargs):
         """Generates a pylab plot from the result set.
@@ -511,18 +520,19 @@ class ResultSet(list, ColumnGuesserMixin):
         through to ``matplotlib.pylab.plot``.
         """
         import matplotlib.pylab as plt
+
         self.guess_plot_columns()
         self.x = self.x or range(len(self.ys[0]))
         coords = functools.reduce(operator.add, [(self.x, y) for y in self.ys])
         plot = plt.plot(*coords, **kwargs)
-        if hasattr(self.x, 'name'):
+        if hasattr(self.x, "name"):
             plt.xlabel(self.x.name)
         ylabel = ", ".join(y.name for y in self.ys)
         plt.title(title or ylabel)
         plt.ylabel(ylabel)
         return plot
 
-    def bar(self, key_word_sep = " ", title=None, **kwargs):
+    def bar(self, key_word_sep=" ", title=None, **kwargs):
         """Generates a pylab bar plot from the result set.
 
         ``matplotlib`` must be installed, and in an
@@ -543,11 +553,11 @@ class ResultSet(list, ColumnGuesserMixin):
         through to ``matplotlib.pylab.bar``.
         """
         import matplotlib.pylab as plt
+
         self.guess_pie_columns(xlabel_sep=key_word_sep)
         plot = plt.bar(range(len(self.ys[0])), self.ys[0], **kwargs)
         if self.xlabels:
-            plt.xticks(range(len(self.xlabels)), self.xlabels,
-                       rotation=45)
+            plt.xticks(range(len(self.xlabels)), self.xlabels, rotation=45)
         plt.xlabel(self.xlabel)
         plt.ylabel(self.ys[0].name)
         return plot
@@ -556,14 +566,14 @@ class ResultSet(list, ColumnGuesserMixin):
         """Generate results in comma-separated form.  Write to ``filename`` if given.
            Any other parameters will be passed on to csv.writer."""
         if not self.pretty:
-            return None # no results
+            return None  # no results
         self.pretty.add_rows(self)
         if filename:
-            encoding = format_params.get('encoding', 'utf-8')
+            encoding = format_params.get("encoding", "utf-8")
             if six.PY2:
-                outfile = open(filename, 'wb')
+                outfile = open(filename, "wb")
             else:
-                outfile = open(filename, 'w', newline='', encoding=encoding)
+                outfile = open(filename, "w", newline="", encoding=encoding)
         else:
             outfile = six.StringIO()
         writer = UnicodeWriter(outfile, **format_params)
@@ -597,11 +607,11 @@ class ResultSet(list, ColumnGuesserMixin):
         """
         self.build_columns()
         import matplotlib.pylab as plt
+
         pie = plt.pie(self.columns[1], labels=self.columns[0], **kwargs)
         plt.title(title or self.columns[1].name)
         plt.show()
         return pie
-
 
     def _render_barh(self, key_word_sep=" ", title=None, **kwargs):
         """Generates a pylab horizaontal barchart from the result set.
@@ -624,6 +634,7 @@ class ResultSet(list, ColumnGuesserMixin):
         through to ``matplotlib.pylab.pie``.
         """
         import matplotlib.pylab as plt
+
         self.build_columns()
         quantity_columns = [c for c in self.columns[1:] if c.is_quantity]
         ylabel = ", ".join([c.name for c in quantity_columns])
@@ -637,7 +648,7 @@ class ResultSet(list, ColumnGuesserMixin):
         x = plt.arange(len(self.columns[0]))
         xpos = -dimw * (len(quantity_columns) / 2)
         for y in quantity_columns:
-            barchart = plt.barh(x + xpos, y, align='center', **kwargs)
+            barchart = plt.barh(x + xpos, y, align="center", **kwargs)
             # ax.barh(x + xpos, y, width = dimw, color='b', align='center', **kwargs)
             # ax.bar(y, width = dimw, height = w, x + xpos, *, align='center', **kwargs)
             xpos += dimw
@@ -670,6 +681,7 @@ class ResultSet(list, ColumnGuesserMixin):
         through to ``matplotlib.pylab.pie``.
         """
         import matplotlib.pylab as plt
+
         self.build_columns()
         quantity_columns = [c for c in self.columns[1:] if c.is_quantity]
         ylabel = ", ".join([c.name for c in quantity_columns])
@@ -686,16 +698,15 @@ class ResultSet(list, ColumnGuesserMixin):
         x = plt.arange(len(self.columns[0]))
         xpos = -dimw * (len(quantity_columns) / 2)
         for y in quantity_columns:
-            columnchart = plt.bar(x + xpos, y, width = dimw, align='center', **kwargs)
+            columnchart = plt.bar(x + xpos, y, width=dimw, align="center", **kwargs)
             xpos += dimw
-        plt.xticks(range(len(self.columns[0])), self.columns[0], rotation = 45)
+        plt.xticks(range(len(self.columns[0])), self.columns[0], rotation=45)
         plt.xlabel(xlabel)
         plt.ylabel(ylabel)
         plt.title(title or ylabel)
 
         plt.show()
         return columnchart
-
 
     def _render_linechart(self, key_word_sep=" ", title=None, **kwargs):
         """Generates a pylab plot from the result set.
@@ -716,6 +727,7 @@ class ResultSet(list, ColumnGuesserMixin):
         """
 
         import matplotlib.pyplot as plt
+
         self.build_columns()
         quantity_columns = [c for c in self.columns if c.is_quantity]
         if len(quantity_columns) < 2:
@@ -761,25 +773,31 @@ class ResultSet(list, ColumnGuesserMixin):
         ys = quantity_columns
         ylabel = ", ".join([c.name for c in ys])
         xlabel = xticks.name
-        data = [go.Scatter(x=xticks,y=yticks,name=yticks.name,mode='lines',line=dict(width=0.5,color=self.get_color_from_palette(idx, n_colors = len(ys))),fill='tozerox') for idx, yticks in enumerate(ys)]
+        data = [
+            go.Scatter(
+                x=xticks,
+                y=yticks,
+                name=yticks.name,
+                mode="lines",
+                line=dict(width=0.5, color=self.get_color_from_palette(idx, n_colors=len(ys))),
+                fill="tozerox",
+            )
+            for idx, yticks in enumerate(ys)
+        ]
         layout = go.Layout(
-            title = title or "areachart",
+            title=title or "areachart",
             showlegend=True,
-            xaxis=dict(
-                title=xlabel,
-                type='category',
-            ),
+            xaxis=dict(title=xlabel, type="category"),
             yaxis=dict(
                 title=ylabel,
-                type='linear',
+                type="linear",
                 # range=[0, 3],
                 # dtick=20,
-                ticksuffix=''
-            )
+                ticksuffix="",
+            ),
         )
         fig = go.Figure(data=data, layout=layout)
         return fig
-
 
     def _render_stackedareachart_plotly(self, key_word_sep=" ", title=None, **kwargs):
         """Generates a pylab plot from the result set.
@@ -815,25 +833,31 @@ class ResultSet(list, ColumnGuesserMixin):
             ys_stcks.append(y_stck)
         ylabel = ", ".join([c.name for c in ys])
         xlabel = xticks.name
-        data = [go.Scatter(x=xticks,y=yticks,name=ys[idx].name,mode='lines',line=dict(width=0.5,color=self.get_color_from_palette(idx, n_colors = len(ys_stcks))),fill='tonexty') for idx, yticks in enumerate(ys_stcks)]
+        data = [
+            go.Scatter(
+                x=xticks,
+                y=yticks,
+                name=ys[idx].name,
+                mode="lines",
+                line=dict(width=0.5, color=self.get_color_from_palette(idx, n_colors=len(ys_stcks))),
+                fill="tonexty",
+            )
+            for idx, yticks in enumerate(ys_stcks)
+        ]
         layout = go.Layout(
-            title = title or "stackedareachart",
+            title=title or "stackedareachart",
             showlegend=True,
-            xaxis=dict(
-                title=xlabel,
-                type='date',
-            ),
+            xaxis=dict(title=xlabel, type="date"),
             yaxis=dict(
                 title=ylabel,
-                type='linear',
+                type="linear",
                 # range=[0, 3],
                 # dtick=20,
-                ticksuffix=''
-            )
+                ticksuffix="",
+            ),
         )
         fig = go.Figure(data=data, layout=layout)
         return fig
-
 
     def _render_timechart_plotly(self, key_word_sep=" ", title=None, **kwargs):
         """Generates a pylab plot from the result set.
@@ -864,49 +888,39 @@ class ResultSet(list, ColumnGuesserMixin):
         ys = quantity_columns[1:]
         ylabel = ", ".join([c.name for c in ys])
         xlabel = xticks.name
-        data = [go.Scatter(
-                                x=xticks,
-                                y=yticks,
-                                name = yticks.name,
-                                line=dict(
-                                    width=0.5,
-                                    color=self.get_color_from_palette(idx, n_colors = len(ys))
-                                ),
-                                opacity = 0.8
-                          ) 
-                for idx, yticks in enumerate(ys)]
+        data = [
+            go.Scatter(
+                x=xticks, y=yticks, name=yticks.name, line=dict(width=0.5, color=self.get_color_from_palette(idx, n_colors=len(ys))), opacity=0.8
+            )
+            for idx, yticks in enumerate(ys)
+        ]
         layout = go.Layout(
-            title = title or "timechart",
+            title=title or "timechart",
             showlegend=True,
             xaxis=dict(
                 rangeselector=dict(
-                    buttons=list([
-                        dict(count=1,
-                             label='1m',
-                             step='month',
-                             stepmode='backward'),
-                        dict(count=6,
-                             label='6m',
-                             step='month',
-                             stepmode='backward'),
-                        dict(step='all')
-                    ])
+                    buttons=list(
+                        [
+                            dict(count=1, label="1m", step="month", stepmode="backward"),
+                            dict(count=6, label="6m", step="month", stepmode="backward"),
+                            dict(step="all"),
+                        ]
+                    )
                 ),
                 rangeslider=dict(),
                 title=xlabel,
-                type='date'
+                type="date",
             ),
-           yaxis=dict(
+            yaxis=dict(
                 title=ylabel,
-                type='linear',
+                type="linear",
                 # range=[0, 3],
                 # dtick=20,
-                ticksuffix=''
-            )
+                ticksuffix="",
+            ),
         )
         fig = go.Figure(data=data, layout=layout)
         return fig
-
 
     def _render_piechart_plotly(self, key_word_sep=" ", title=None, **kwargs):
 
@@ -925,48 +939,57 @@ class ResultSet(list, ColumnGuesserMixin):
         xinterval = 0 if pies_in_row < 2 else 0.05 / (pies_in_row - 1)
         xdelta = 1.0 if pies_in_row < 2 else 0.95 / pies_in_row
         # layout of pies
-        number_of_rows = (pies + max_pies_in_row -1 ) // max_pies_in_row
+        number_of_rows = (pies + max_pies_in_row - 1) // max_pies_in_row
         yinterval = 0 if number_of_rows < 2 else 0.05 / (number_of_rows - 1)
         ydelta = 1.0 if number_of_rows < 2 else 0.95 / number_of_rows
 
-        domains = [dict(x = [0 + (xdelta + xinterval) * (i %  pies_in_row), 1 - (xdelta + xinterval)*(pies_in_row  - (i %  pies_in_row) - 1)], 
-                        y = [0 + (ydelta + yinterval) * (i // pies_in_row), 1 - (ydelta + yinterval)*(number_of_rows -(i // pies_in_row)  -1)]) for i in range(0, pies)]
+        domains = [
+            dict(
+                x=[0 + (xdelta + xinterval) * (i % pies_in_row), 1 - (xdelta + xinterval) * (pies_in_row - (i % pies_in_row) - 1)],
+                y=[0 + (ydelta + yinterval) * (i // pies_in_row), 1 - (ydelta + yinterval) * (number_of_rows - (i // pies_in_row) - 1)],
+            )
+            for i in range(0, pies)
+        ]
 
         xticks = self.columns[0]
         ys = quantity_columns
         ylabel = ", ".join([c.name for c in ys])
         xlabel = xticks.name
         palette = self._get_palette(n_colors=len(xticks))
-        data = [go.Pie(labels=xticks, values=yticks, domain=domains[idx], marker=dict(colors=palette), name=yticks.name, textinfo='label+percent') for idx, yticks in enumerate(ys)]
+        data = [
+            go.Pie(labels=xticks, values=yticks, domain=domains[idx], marker=dict(colors=palette), name=yticks.name, textinfo="label+percent")
+            for idx, yticks in enumerate(ys)
+        ]
         layout = go.Layout(
-            title = title or "piechart",
+            title=title or "piechart",
             showlegend=True,
-            annotations=[dict(text=yticks.name, showarrow=False, x=(domains[idx].get('x')[0] + domains[idx].get('x')[1])/2, y=domains[idx].get('y')[0] - 0.05 * ydelta) for idx, yticks in enumerate(ys)]
+            annotations=[
+                dict(
+                    text=yticks.name,
+                    showarrow=False,
+                    x=(domains[idx].get("x")[0] + domains[idx].get("x")[1]) / 2,
+                    y=domains[idx].get("y")[0] - 0.05 * ydelta,
+                )
+                for idx, yticks in enumerate(ys)
+            ],
         )
 
         layout1 = go.Layout(
-            title = title or "piechart",
+            title=title or "piechart",
             showlegend=True,
-            xaxis=dict(
-                title=xlabel,
-                type='category',
-            ),
+            xaxis=dict(title=xlabel, type="category"),
             yaxis=dict(
                 title=ylabel,
-                type='linear',
+                type="linear",
                 # range=[0, 3],
                 # dtick=20,
-                ticksuffix=''
-            )
+                ticksuffix="",
+            ),
         )
         fig = go.Figure(data=data, layout=layout)
         return fig
 
-
-
-
     def _render_barchart_plotly(self, key_word_sep=" ", title=None, **kwargs):
-
 
         self.build_columns()
         quantity_columns = [c for c in self.columns[1:] if c.is_quantity]
@@ -977,21 +1000,21 @@ class ResultSet(list, ColumnGuesserMixin):
         ys = quantity_columns
         ylabel = ", ".join([c.name for c in ys])
         xlabel = xticks.name
-        data = [go.Bar(x=yticks, y=xticks, marker=dict(color=self.get_color_from_palette(idx, n_colors = len(ys))), name=yticks.name, orientation = 'h') for idx, yticks in enumerate(ys)]
+        data = [
+            go.Bar(x=yticks, y=xticks, marker=dict(color=self.get_color_from_palette(idx, n_colors=len(ys))), name=yticks.name, orientation="h")
+            for idx, yticks in enumerate(ys)
+        ]
         layout = go.Layout(
-            title = title or "barchart",
+            title=title or "barchart",
             showlegend=True,
             xaxis=dict(
                 title=ylabel,
-                type='linear',
+                type="linear",
                 # range=[0, 3],
                 # dtick=20,
-                ticksuffix=''
+                ticksuffix="",
             ),
-            yaxis=dict(
-                type='category',
-                title=xlabel,
-            )
+            yaxis=dict(type="category", title=xlabel),
         )
         fig = go.Figure(data=data, layout=layout)
         return fig
@@ -1007,21 +1030,21 @@ class ResultSet(list, ColumnGuesserMixin):
         ys = quantity_columns
         ylabel = ", ".join([c.name for c in ys])
         xlabel = xticks.name
-        data = [go.Bar(x=xticks, y=yticks, marker=dict(color=self.get_color_from_palette(idx, n_colors = len(ys))), name=yticks.name) for idx, yticks in enumerate(ys)]
+        data = [
+            go.Bar(x=xticks, y=yticks, marker=dict(color=self.get_color_from_palette(idx, n_colors=len(ys))), name=yticks.name)
+            for idx, yticks in enumerate(ys)
+        ]
         layout = go.Layout(
-            title = title or "columnchart",
+            title=title or "columnchart",
             showlegend=True,
-            xaxis=dict(
-                title=xlabel,
-                type='category',
-            ),
+            xaxis=dict(title=xlabel, type="category"),
             yaxis=dict(
                 title=ylabel,
-                type='linear',
+                type="linear",
                 # range=[0, 3],
                 # dtick=20,
-                ticksuffix=''
-            )
+                ticksuffix="",
+            ),
         )
         fig = go.Figure(data=data, layout=layout)
         return fig
@@ -1056,35 +1079,29 @@ class ResultSet(list, ColumnGuesserMixin):
         ys = quantity_columns[1:]
         ylabel = ", ".join([c.name for c in ys])
         xlabel = xticks.name
-        data = [go.Scatter(
-                                x=xticks,
-                                y=yticks,
-                                name = yticks.name,
-                                line=dict(
-                                    width=1,
-                                    color=self.get_color_from_palette(idx, n_colors = len(ys))
-                                ),
-                                opacity = 0.8
-                          ) 
-                for idx, yticks in enumerate(ys)]
+        data = [
+            go.Scatter(
+                x=xticks, y=yticks, name=yticks.name, line=dict(width=1, color=self.get_color_from_palette(idx, n_colors=len(ys))), opacity=0.8
+            )
+            for idx, yticks in enumerate(ys)
+        ]
         layout = go.Layout(
-            title = title or "linechart",
+            title=title or "linechart",
             showlegend=True,
             xaxis=dict(
                 title=xlabel,
                 # type='linear',
             ),
-           yaxis=dict(
+            yaxis=dict(
                 title=ylabel,
-                type='linear',
+                type="linear",
                 # range=[0, 3],
                 # dtick=20,
                 # ticksuffix=''
-            )
+            ),
         )
         fig = go.Figure(data=data, layout=layout)
         return fig
-
 
     def _render_scatterchart_plotly(self, key_word_sep=" ", title=None, **kwargs):
         """Generates a pylab plot from the result set.
@@ -1105,7 +1122,6 @@ class ResultSet(list, ColumnGuesserMixin):
         through to ``matplotlib.pylab.plot``.
         """
 
-
         self.build_columns()
         quantity_columns = [c for c in self.columns[1:] if c.is_quantity]
         if len(quantity_columns) < 1:
@@ -1116,29 +1132,33 @@ class ResultSet(list, ColumnGuesserMixin):
 
         ylabel = ", ".join([c.name for c in ys])
         xlabel = xticks.name
-        data = [go.Scatter(x=xticks,y=yticks,name=yticks.name,mode='markers',marker=dict(line=dict(width=1),color=self.get_color_from_palette(idx, n_colors = len(ys)))) for idx, yticks in enumerate(ys)]
+        data = [
+            go.Scatter(
+                x=xticks,
+                y=yticks,
+                name=yticks.name,
+                mode="markers",
+                marker=dict(line=dict(width=1), color=self.get_color_from_palette(idx, n_colors=len(ys))),
+            )
+            for idx, yticks in enumerate(ys)
+        ]
         layout = go.Layout(
-            title = title or "scatterchart",
+            title=title or "scatterchart",
             showlegend=True,
-            xaxis=dict(
-                title=xlabel,
-                type='category',
-            ),
+            xaxis=dict(title=xlabel, type="category"),
             yaxis=dict(
                 title=ylabel,
-                type='linear',
+                type="linear",
                 # range=[0, 3],
                 # dtick=20,
-                ticksuffix=''
-            )
+                ticksuffix="",
+            ),
         )
         fig = go.Figure(data=data, layout=layout)
         return fig
 
-
-
     def _render_anomalychart_plotly(self, key_word_sep=" ", title=None, **kwargs):
-        return self._render_timechart_plotly(key_word_sep, title or "anomalychart", fieldnames='kql-anomalychart-plot', **kwargs)
+        return self._render_timechart_plotly(key_word_sep, title or "anomalychart", fieldnames="kql-anomalychart-plot", **kwargs)
 
 
 class PrettyTable(prettytable.PrettyTable):
@@ -1147,7 +1167,7 @@ class PrettyTable(prettytable.PrettyTable):
     def __init__(self, *args, **kwargs):
         self.row_count = 0
         self.display_limit = None
-        return super(PrettyTable, self).__init__(*args,  **kwargs)
+        return super(PrettyTable, self).__init__(*args, **kwargs)
 
     def add_rows(self, data):
         if self.row_count and (data.options.get("display_limit") == self.display_limit):
@@ -1160,7 +1180,5 @@ class PrettyTable(prettytable.PrettyTable):
             self.row_count = len(data)
         else:
             self.row_count = min(len(data), self.display_limit)
-        for row in data[:self.display_limit]:
+        for row in data[: self.display_limit]:
             self.add_row(row)
-
-

@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.27004.2005
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{888888A0-9F3D-457C-B088-3A5042F75D52}") = "KqlMagic", "KqlMagic.pyproj", "{EF1FC82B-EC08-4841-9BFE-91CA2E3B2E87}"
+Project("{888888A0-9F3D-457C-B088-3A5042F75D52}") = "jupyter-Kqlmagic", "jupyter-Kqlmagic.pyproj", "{EF1FC82B-EC08-4841-9BFE-91CA2E3B2E87}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

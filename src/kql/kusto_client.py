@@ -1,23 +1,26 @@
 from datetime import timedelta, datetime
 import re
 import json
-import adal 
+import adal
 import dateutil.parser
 import requests
 from azure.kusto.data.request import KustoClient, KustoConnectionStringBuilder
 from azure.kusto.data.exceptions import KustoServiceError
+
 # from azure.kusto.data import KustoClient
 from azure.kusto.data._response import WellKnownDataSet
 from kql.my_aad_helper import _MyAadHelper
 
 
 # Regex for TimeSpan
-TIMESPAN_PATTERN = re.compile(r'((?P<d>[0-9]*).)?(?P<h>[0-9]{2}):(?P<m>[0-9]{2}):(?P<s>[0-9]{2})(.(?P<ms>[0-9]*))?')
+TIMESPAN_PATTERN = re.compile(r"((?P<d>[0-9]*).)?(?P<h>[0-9]{2}):(?P<m>[0-9]{2}):(?P<s>[0-9]{2})(.(?P<ms>[0-9]*))?")
 
-__version__ = '0.1.0'
+__version__ = "0.1.0"
+
 
 class KustoResult(dict):
     """ Simple wrapper around dictionary, to enable both index and key access to rows in result """
+
     def __init__(self, index2column_mapping, *args, **kwargs):
         super(KustoResult, self).__init__(*args, **kwargs)
         # TODO: this is not optimal, if client will not access all fields.
@@ -36,13 +39,14 @@ class KustoResult(dict):
 
 class KustoResponseTable(object):
     """ Iterator over returned rows """
+
     def __init__(self, response_table):
-        self.rows = response_table['Rows']
-        self.columns = response_table['Columns']
+        self.rows = response_table["Rows"]
+        self.columns = response_table["Columns"]
         self.index2column_mapping = []
         self.index2type_mapping = []
         for c in self.columns:
-            self.index2column_mapping.append(c['ColumnName'])
+            self.index2column_mapping.append(c["ColumnName"])
             ctype = c["ColumnType"] if "ColumnType" in c else c["DataType"]
             self.index2type_mapping.append(ctype)
         self.next = 0
@@ -51,9 +55,10 @@ class KustoResponseTable(object):
         self.converters_lambda_mappings = {
             "datetime": self.to_datetime,
             "timespan": self.to_timedelta,
-            'DateTime': self.to_datetime, 
-            'TimeSpan': self.to_timedelta,
-            'dynamic': self.to_object}
+            "DateTime": self.to_datetime,
+            "TimeSpan": self.to_timedelta,
+            "dynamic": self.to_object,
+        }
 
     @staticmethod
     def to_object(value):
@@ -74,13 +79,14 @@ class KustoResponseTable(object):
         m = TIMESPAN_PATTERN.match(value)
         if m:
             return timedelta(
-                days=int(m.group('d') or 0),
-                hours=int(m.group('h')),
-                minutes=int(m.group('m')),
-                seconds=int(m.group('s')),
-                milliseconds=int(m.group('ms') or 0))
+                days=int(m.group("d") or 0),
+                hours=int(m.group("h")),
+                minutes=int(m.group("m")),
+                seconds=int(m.group("s")),
+                milliseconds=int(m.group("ms") or 0),
+            )
         else:
-            raise ValueError('Timespan value \'{}\' cannot be decoded'.format(value))
+            raise ValueError("Timespan value '{}' cannot be decoded".format(value))
 
     def __iter__(self):
         return self
@@ -133,80 +139,81 @@ class KustoResponseTable(object):
         self.last = len(self.rows)
         return self.__iter__()
 
+
 class KustoResponse(object):
     """ Wrapper for response """
+
     # TODO: add support to get additional infromation from response, like execution time
 
     def __init__(self, json_response, endpoint_version):
         self.json_response = json_response
         self.endpoint_version = endpoint_version
-        if self.endpoint_version == 'v2':
+        if self.endpoint_version == "v2":
             self.all_tables = [t for t in json_response if t["FrameType"] == "DataTable"]
             self.tables = [t for t in json_response if t["FrameType"] == "DataTable" and t["TableKind"] == "PrimaryResult"]
             self.primary_results = [KustoResponseTable(t) for t in self.tables]
         else:
-            self.all_tables = self.json_response['Tables']
-            self.tables = self.json_response['Tables']
+            self.all_tables = self.json_response["Tables"]
+            self.tables = self.json_response["Tables"]
             self.primary_results = [KustoResponseTable(self.tables[0])]
 
     @property
     def visualization_results(self):
-        if self.endpoint_version == 'v2':
+        if self.endpoint_version == "v2":
             for table in self.all_tables:
-                if table['TableName'] == '@ExtendedProperties':
-                    for row in table['Rows']:
-                        if row[1] == 'Visualization':
+                if table["TableName"] == "@ExtendedProperties":
+                    for row in table["Rows"]:
+                        if row[1] == "Visualization":
                             # print('visualization_properties: {}'.format(row[2]))
                             return json.loads(row[2])
         else:
-            tables_num = self.json_response['Tables'].__len__()
-            last_table = self.json_response['Tables'][tables_num - 1]
-            for row in last_table['Rows']:
+            tables_num = self.json_response["Tables"].__len__()
+            last_table = self.json_response["Tables"][tables_num - 1]
+            for row in last_table["Rows"]:
                 if row[2] == "@ExtendedProperties":
-                    table = self.json_response['Tables'][row[0]]
+                    table = self.json_response["Tables"][row[0]]
                     # print('visualization_properties: {}'.format(table['Rows'][0][0]))
-                    return json.loads(table['Rows'][0][0])
+                    return json.loads(table["Rows"][0][0])
         return {}
 
     @property
     def completion_query_info_results(self):
-        if self.endpoint_version == 'v2':
+        if self.endpoint_version == "v2":
             for table in self.all_tables:
-                if table['TableName'] == 'QueryCompletionInformation':
-                    cols_idx_map = self._map_columns_to_index(table['Columns'])
-                    event_type_name_idx =cols_idx_map.get('EventTypeName')
-                    payload_idx =cols_idx_map.get('Payload')
+                if table["TableName"] == "QueryCompletionInformation":
+                    cols_idx_map = self._map_columns_to_index(table["Columns"])
+                    event_type_name_idx = cols_idx_map.get("EventTypeName")
+                    payload_idx = cols_idx_map.get("Payload")
                     if event_type_name_idx is not None and payload_idx is not None:
-                        for row in table['Rows']:
-                            if row[event_type_name_idx] == 'QueryInfo':
+                        for row in table["Rows"]:
+                            if row[event_type_name_idx] == "QueryInfo":
                                 return json.loads(row[payload_idx])
         else:
             pass
             # todo: implement it
         return {}
-
 
     @property
     def completion_query_resource_consumption_results(self):
-        if self.endpoint_version == 'v2':
+        if self.endpoint_version == "v2":
             for table in self.all_tables:
-                if table['TableName'] == 'QueryCompletionInformation':
-                    cols_idx_map = self._map_columns_to_index(table['Columns'])
-                    event_type_name_idx =cols_idx_map.get('EventTypeName')
-                    payload_idx =cols_idx_map.get('Payload')
+                if table["TableName"] == "QueryCompletionInformation":
+                    cols_idx_map = self._map_columns_to_index(table["Columns"])
+                    event_type_name_idx = cols_idx_map.get("EventTypeName")
+                    payload_idx = cols_idx_map.get("Payload")
                     if event_type_name_idx is not None and payload_idx is not None:
-                        for row in table['Rows']:
-                            if row[event_type_name_idx] == 'QueryResourceConsumption':
+                        for row in table["Rows"]:
+                            if row[event_type_name_idx] == "QueryResourceConsumption":
                                 return json.loads(row[payload_idx])
         else:
             pass
             # todo: implement it
         return {}
 
-    def _map_columns_to_index(self, columns : list):
+    def _map_columns_to_index(self, columns: list):
         map = {}
         for idx, col in enumerate(columns):
-            map[col['ColumnName']] = idx
+            map[col["ColumnName"]] = idx
         return map
 
     def get_raw_response(self):
@@ -214,20 +221,21 @@ class KustoResponse(object):
 
     def get_table_count(self):
         return len(self.tables)
-        
 
     def has_exceptions(self):
-        return 'Exceptions' in self.json_response
+        return "Exceptions" in self.json_response
 
     def get_exceptions(self):
-        return self.json_response['Exceptions']
+        return self.json_response["Exceptions"]
+
 
 # used in Kqlmagic
 class KustoError(Exception):
     """
     Represents error returned from server. Error can contain partial results of the executed query.
     """
-    def __init__(self, messages, http_response, appinsights_response = None):
+
+    def __init__(self, messages, http_response, appinsights_response=None):
         super(KustoError, self).__init__(messages)
         self.http_response = http_response
         self.appinsights_response = appinsights_response
@@ -244,17 +252,17 @@ class KustoError(Exception):
     def get_partial_results(self):
         return self.appinsights_response
 
+
 class KustoResponseDataSet(object):
     def __init__(self, dataset_response):
         self.dataset_response = dataset_response
-        self.primary_results = self.get_primary_results() 
+        self.primary_results = self.get_primary_results()
 
     def get_primary_results(self):
         primary_results = self.dataset_response.primary_results
         if isinstance(primary_results, list):
             primary_results = primary_results[0]
         return primary_results
-
 
     @property
     def rows_count(self):
@@ -269,9 +277,9 @@ class KustoResponseDataSet(object):
     @property
     def visualization_results(self):
         try:
-            table = self.dataset_response['@ExtendedProperties']
+            table = self.dataset_response["@ExtendedProperties"]
             for row in table:
-                if row[1] == 'Visualization':
+                if row[1] == "Visualization":
                     return json.loads(r[2])
         except:
             pass
@@ -281,10 +289,10 @@ class KustoResponseDataSet(object):
     @property
     def completion_query_info_results(self):
         try:
-            table = self.dataset_response['QueryCompletionInformation']
+            table = self.dataset_response["QueryCompletionInformation"]
             for row in table:
-                if row['EventTypeName'] == 'QueryInfo':
-                    return json.loads(row['Payload'])
+                if row["EventTypeName"] == "QueryInfo":
+                    return json.loads(row["Payload"])
         except:
             pass
         return {}
@@ -292,10 +300,10 @@ class KustoResponseDataSet(object):
     @property
     def completion_query_resource_consumption_results(self):
         try:
-            table = self.dataset_response['QueryCompletionInformation']
+            table = self.dataset_response["QueryCompletionInformation"]
             for row in table:
-                if row['EventTypeName'] == 'QueryResourceConsumption':
-                    return json.loads(row['Payload'])
+                if row["EventTypeName"] == "QueryResourceConsumption":
+                    return json.loads(row["Payload"])
         except:
             pass
         return {}
@@ -315,6 +323,7 @@ class KustoResponseDataSet(object):
         # TODO: we called this fethall to resemble Python DB API,
         # but this can be as easily called result or similar
         return self.__iter__()
+
 
 class Kusto_Client(object):
     """
@@ -379,21 +388,15 @@ class Kusto_Client(object):
             In case your tenant is not microsoft please use this param.
         """
         if all([username, password]):
-            kcsb = KustoConnectionStringBuilder.with_aad_user_password_authentication(
-                kusto_cluster, username, password
-            )
+            kcsb = KustoConnectionStringBuilder.with_aad_user_password_authentication(kusto_cluster, username, password)
         elif all([client_id, client_secret]):
-            kcsb = KustoConnectionStringBuilder.with_aad_application_key_authentication(
-                kusto_cluster, client_id, client_secret
-            )
+            kcsb = KustoConnectionStringBuilder.with_aad_application_key_authentication(kusto_cluster, client_id, client_secret)
         elif all([client_id, certificate, certificate_thumbprint]):
             kcsb = KustoConnectionStringBuilder.with_aad_application_certificate_authentication(
                 kusto_cluster, client_id, certificate, certificate_thumbprint
             )
         else:
-            kcsb = KustoConnectionStringBuilder.with_aad_device_authentication(
-                kusto_cluster
-            )
+            kcsb = KustoConnectionStringBuilder.with_aad_device_authentication(kusto_cluster)
 
         if authority:
             kcsb.authority_id = authority
@@ -402,17 +405,10 @@ class Kusto_Client(object):
 
         # replace aadhelper to use remote browser in interactive mode
         self.client._aad_helper = _MyAadHelper(kcsb)
-        self.mgmt_endpoint_version = 'v2' if self.client._mgmt_endpoint.endswith("v2/rest/query") else 'v1'
-        self.query_endpoint_version = 'v2' if self.client._query_endpoint.endswith("v2/rest/query") else 'v1'
+        self.mgmt_endpoint_version = "v2" if self.client._mgmt_endpoint.endswith("v2/rest/query") else "v1"
+        self.query_endpoint_version = "v2" if self.client._query_endpoint.endswith("v2/rest/query") else "v1"
 
-    def execute(
-        self,
-        kusto_database,
-        query,
-        accept_partial_results=False,
-        timeout=None,
-        get_raw_response=False,
-    ):
+    def execute(self, kusto_database, query, accept_partial_results=False, timeout=None, get_raw_response=False):
         """ Execute a simple query or management command
 
         Parameters
@@ -432,16 +428,9 @@ class Kusto_Client(object):
         """
         endpoint_version = self.mgmt_endpoint_version if query.startswith(".") else self.query_endpoint_version
         response = self.client.execute(kusto_database, query, accept_partial_results, timeout, get_raw_response)
-        return KustoResponse(response, endpoint_version) if get_raw_response else  KustoResponseDataSet(response)
+        return KustoResponse(response, endpoint_version) if get_raw_response else KustoResponseDataSet(response)
 
-    def execute_query(
-        self,
-        kusto_database,
-        query,
-        accept_partial_results=False,
-        timeout=None,
-        get_raw_response=False,
-    ):
+    def execute_query(self, kusto_database, query, accept_partial_results=False, timeout=None, get_raw_response=False):
         """ Execute a simple query
 
         Parameters
@@ -461,17 +450,10 @@ class Kusto_Client(object):
         get_raw_response : bool, optional
             Optional parameter. Whether to get a raw response, or a parsed one.
         """
-        response = self.client.execute_query(kusto_database, query, accept_partial_results, timeout, get_raw_response,)
-        return KustoResponse(response, self.query_endpoint_version) if get_raw_response else  KustoResponseDataSet(response)
+        response = self.client.execute_query(kusto_database, query, accept_partial_results, timeout, get_raw_response)
+        return KustoResponse(response, self.query_endpoint_version) if get_raw_response else KustoResponseDataSet(response)
 
-    def execute_mgmt(
-        self,
-        kusto_database,
-        query,
-        accept_partial_results=False,
-        timeout=None,
-        get_raw_response=False,
-    ):
+    def execute_mgmt(self, kusto_database, query, accept_partial_results=False, timeout=None, get_raw_response=False):
         """ Execute a management command
 
         Parameters
@@ -491,8 +473,6 @@ class Kusto_Client(object):
         get_raw_response : bool, optional
             Optional parameter. Whether to get a raw response, or a parsed one.
         """
-        response = self.client.execute_mgmt(kusto_database, query, accept_partial_results, timeout, get_raw_response,)
-        
-        return KustoResponse(response, self.mgmt_endpoint_version) if get_raw_response else  KustoResponseDataSet(response)
+        response = self.client.execute_mgmt(kusto_database, query, accept_partial_results, timeout, get_raw_response)
 
-
+        return KustoResponse(response, self.mgmt_endpoint_version) if get_raw_response else KustoResponseDataSet(response)

@@ -1,18 +1,20 @@
 from datetime import timedelta, datetime
 import re
 import json
-import adal 
+import adal
 import dateutil.parser
 import requests
 import webbrowser
 
 # Regex for TimeSpan
-TIMESPAN_PATTERN = re.compile(r'((?P<d>[0-9]*).)?(?P<h>[0-9]{2}):(?P<m>[0-9]{2}):(?P<s>[0-9]{2})(.(?P<ms>[0-9]*))?')
+TIMESPAN_PATTERN = re.compile(r"((?P<d>[0-9]*).)?(?P<h>[0-9]{2}):(?P<m>[0-9]{2}):(?P<s>[0-9]{2})(.(?P<ms>[0-9]*))?")
 
-__version__ = '0.1.0'
+__version__ = "0.1.0"
+
 
 class LoganalyticsResult(dict):
     """ Simple wrapper around dictionary, to enable both index and key access to rows in result """
+
     def __init__(self, index2column_mapping, *args, **kwargs):
         super(LoganalyticsResult, self).__init__(*args, **kwargs)
         # TODO: this is not optimal, if client will not access all fields.
@@ -31,13 +33,14 @@ class LoganalyticsResult(dict):
 
 class LoganalyticsResponseTable(object):
     """ Iterator over returned rows """
+
     def __init__(self, response_table):
-        self.rows = response_table['Rows']
-        self.columns = response_table['Columns']
+        self.rows = response_table["Rows"]
+        self.columns = response_table["Columns"]
         self.index2column_mapping = []
         self.index2type_mapping = []
         for c in self.columns:
-            self.index2column_mapping.append(c['ColumnName'])
+            self.index2column_mapping.append(c["ColumnName"])
             ctype = c["ColumnType"] if "ColumnType" in c else c["DataType"]
             self.index2type_mapping.append(ctype)
         self.next = 0
@@ -45,11 +48,12 @@ class LoganalyticsResponseTable(object):
         # Here we keep converter functions for each type that we need to take special care (e.g. convert)
         # Here we keep converter functions for each type that we need to take special care (e.g. convert)
         self.converters_lambda_mappings = {
-            'datetime': self.to_datetime, 
-            'timespan': self.to_timedelta,
-            'DateTime': self.to_datetime, 
-            'TimeSpan': self.to_timedelta,
-            'dynamic': self.to_object}
+            "datetime": self.to_datetime,
+            "timespan": self.to_timedelta,
+            "DateTime": self.to_datetime,
+            "TimeSpan": self.to_timedelta,
+            "dynamic": self.to_object,
+        }
 
     @staticmethod
     def to_object(value):
@@ -70,13 +74,14 @@ class LoganalyticsResponseTable(object):
         m = TIMESPAN_PATTERN.match(value)
         if m:
             return timedelta(
-                days=int(m.group('d') or 0),
-                hours=int(m.group('h')),
-                minutes=int(m.group('m')),
-                seconds=int(m.group('s')),
-                milliseconds=int(m.group('ms') or 0))
+                days=int(m.group("d") or 0),
+                hours=int(m.group("h")),
+                minutes=int(m.group("m")),
+                seconds=int(m.group("s")),
+                milliseconds=int(m.group("ms") or 0),
+            )
         else:
-            raise ValueError('Timespan value \'{}\' cannot be decoded'.format(value))
+            raise ValueError("Timespan value '{}' cannot be decoded".format(value))
 
     def __iter__(self):
         return self
@@ -98,7 +103,6 @@ class LoganalyticsResponseTable(object):
                     result_dict[self.index2column_mapping[index]] = value
             self.next = self.next + 1
             return LoganalyticsResult(self.index2column_mapping, result_dict)
-
 
     @property
     def columns_name(self):
@@ -130,57 +134,59 @@ class LoganalyticsResponseTable(object):
         self.last = len(self.rows)
         return self.__iter__()
 
+
 class LoganalyticsResponse(object):
     """ Wrapper for response """
+
     # TODO: add support to get additional infromation from response, like execution time
 
     def __init__(self, json_response):
         self.json_response = json_response
         self.primary_results = []
-        tables_num = self.json_response['Tables'].__len__()
-        last_table = self.json_response['Tables'][tables_num - 1]
-        for r in last_table['Rows']:
+        tables_num = self.json_response["Tables"].__len__()
+        last_table = self.json_response["Tables"][tables_num - 1]
+        for r in last_table["Rows"]:
             if r[2] == "GenericResult" or r[2] == "PrimaryResult":
-                t = self.json_response['Tables'][r[0]]
+                t = self.json_response["Tables"][r[0]]
                 self.primary_results.append(AppinsightsResponseTable(t))
         if len(self.primary_results) == 0:
-            t = self.json_response['Tables'][0]
+            t = self.json_response["Tables"][0]
             self.primary_results.append(AppinsightsResponseTable(t))
 
     @property
     def visualization_results(self):
-        tables_num = self.json_response['Tables'].__len__()
-        last_table = self.json_response['Tables'][tables_num - 1]
-        for r in last_table['Rows']:
+        tables_num = self.json_response["Tables"].__len__()
+        last_table = self.json_response["Tables"][tables_num - 1]
+        for r in last_table["Rows"]:
             if r[2] == "@ExtendedProperties":
-                t = self.json_response['Tables'][r[0]]
+                t = self.json_response["Tables"][r[0]]
                 # print('visualization_properties: {}'.format(t['Rows'][0][0]))
-                return json.loads(t['Rows'][0][0])
+                return json.loads(t["Rows"][0][0])
         return None
 
     @property
     def completion_query_info_results(self):
-        tables_num = self.json_response['Tables'].__len__()
-        last_table = self.json_response['Tables'][tables_num - 1]
-        for r in last_table['Rows']:
+        tables_num = self.json_response["Tables"].__len__()
+        last_table = self.json_response["Tables"][tables_num - 1]
+        for r in last_table["Rows"]:
             if r[2] == "QueryStatus":
-                t = self.json_response['Tables'][r[0]]
-                for sr in t['Rows']:
-                    if sr[2] == 'Info':
-                        info =  {"StatusCode" : sr[3], "StatusDescription" : sr[4], "Count" : sr[5]}
+                t = self.json_response["Tables"][r[0]]
+                for sr in t["Rows"]:
+                    if sr[2] == "Info":
+                        info = {"StatusCode": sr[3], "StatusDescription": sr[4], "Count": sr[5]}
                         # print('Info: {}'.format(info))
                         return info
         return {}
 
     @property
     def completion_query_resource_consumption_results(self):
-        tables_num = self.json_response['Tables'].__len__()
-        last_table = self.json_response['Tables'][tables_num - 1]
-        for r in last_table['Rows']:
+        tables_num = self.json_response["Tables"].__len__()
+        last_table = self.json_response["Tables"][tables_num - 1]
+        for r in last_table["Rows"]:
             if r[2] == "QueryStatus":
-                t = self.json_response['Tables'][r[0]]
-                for sr in t['Rows']:
-                    if sr[2] == 'Stats':
+                t = self.json_response["Tables"][r[0]]
+                for sr in t["Rows"]:
+                    if sr[2] == "Stats":
                         stats = sr[4]
                         # print('stats: {}'.format(stats))
                         return json.loads(stats)
@@ -190,20 +196,22 @@ class LoganalyticsResponse(object):
         return self.json_response
 
     def get_table_count(self):
-        return len(self.json_response['Tables'])
+        return len(self.json_response["Tables"])
 
     def has_exceptions(self):
-        return 'Exceptions' in self.json_response
+        return "Exceptions" in self.json_response
 
     def get_exceptions(self):
-        return self.json_response['Exceptions']
+        return self.json_response["Exceptions"]
+
 
 # used in Kqlmagic
 class LoganalyticsError(Exception):
     """
     Represents error returned from server. Error can contain partial results of the executed query.
     """
-    def __init__(self, messages, http_response, loganalytics_response = None):
+
+    def __init__(self, messages, http_response, loganalytics_response=None):
         super(LoganalyticsError, self).__init__(messages)
         self.http_response = http_response
         self.loganalytics_response = loganalytics_response
@@ -219,6 +227,7 @@ class LoganalyticsError(Exception):
 
     def get_partial_results(self):
         return self.loganalytics_response
+
 
 class LoganalyticsClient(object):
     """
@@ -251,7 +260,7 @@ class LoganalyticsClient(object):
     >>>    print(row[0])
     >>>    print(row["ColumnName"])    """
 
-    def __init__(self, workspace=None, appkey=None, version='v1'):
+    def __init__(self, workspace=None, appkey=None, version="v1"):
         """
         Kusto Client constructor.
 
@@ -271,12 +280,12 @@ class LoganalyticsClient(object):
             REST API version, defaults to v1.
         """
 
-        self.cluster = 'https://api.loganalytics.io'
+        self.cluster = "https://api.loganalytics.io"
         self.version = version
         self.workspace = workspace
         self.appkey = appkey
 
-    def execute(self, workspace, query:str, accept_partial_results = False, timeout = None, get_raw_response=False):
+    def execute(self, workspace, query: str, accept_partial_results=False, timeout=None, get_raw_response=False):
         """ Execute a simple query
         
         Parameters
@@ -298,7 +307,7 @@ class LoganalyticsClient(object):
         """
         return self.execute_query(workspace, query, accept_partial_results, timeout, get_raw_response)
 
-    def execute_query(self, workspace, query:str, accept_partial_results = False, timeout = None, get_raw_response=False):
+    def execute_query(self, workspace, query: str, accept_partial_results=False, timeout=None, get_raw_response=False):
         """ Execute a simple query 
         
         Parameters
@@ -318,31 +327,24 @@ class LoganalyticsClient(object):
         get_raw_response : bool, optional
             Optional parameter. Whether to get a raw response, or a parsed one.
         """
-        query_endpoint = '{0}/{1}/workspaces/{2}/query'.format(self.cluster, self.version, self.workspace)
+        query_endpoint = "{0}/{1}/workspaces/{2}/query".format(self.cluster, self.version, self.workspace)
         return self._execute(query, query_endpoint, accept_partial_results, timeout, get_raw_response)
 
-
-    def _execute(self, query, query_endpoint, accept_partial_results = False, timeout = None, get_raw_response=False):
+    def _execute(self, query, query_endpoint, accept_partial_results=False, timeout=None, get_raw_response=False):
         """ Executes given query against this client """
 
-        request_payload = {
-            'query': query
-        }
+        request_payload = {"query": query}
 
         self.request_headers = {
-            'Content-Type': 'application/json',
-            'x-api-key': self.appkey,
-            'x-ms-client-version':'LogAnalytics.Python.Client:' + __version__,
+            "Content-Type": "application/json",
+            "x-api-key": self.appkey,
+            "x-ms-client-version": "LogAnalytics.Python.Client:" + __version__,
         }
-        if self.version != 'beta':
-            prefer_str = 'ai.response-thinning=false'
-            self.request_headers['Prefer'] = prefer_str
+        if self.version != "beta":
+            prefer_str = "ai.response-thinning=false"
+            self.request_headers["Prefer"] = prefer_str
 
-        response = requests.post(
-            query_endpoint,
-            headers=self.request_headers,
-            json=request_payload
-        )
+        response = requests.post(query_endpoint, headers=self.request_headers, json=request_payload)
 
         if response.status_code == 200:
             loganalytics_response = LoganalyticsResponse(response.json())
@@ -351,30 +353,25 @@ class LoganalyticsClient(object):
             # print('loganalytics_response:', response.json())
             return loganalytics_response
         else:
-            raise LoganalyticsError([response.text,], response)
+            raise LoganalyticsError([response.text], response)
 
     def _acquire_token(self):
         token_response = self.adal_context.acquire_token(self.loganalytics_cluster, self.username, self.client_id)
         if token_response is not None:
-            expiration_date = dateutil.parser.parse(token_response['expiresOn'])
-            if (expiration_date > datetime.utcnow() + timedelta(minutes=5)):
-                return token_response['accessToken']
-                
+            expiration_date = dateutil.parser.parse(token_response["expiresOn"])
+            if expiration_date > datetime.utcnow() + timedelta(minutes=5):
+                return token_response["accessToken"]
+
         if self.client_secret is not None and self.client_id is not None:
-            token_response = self.adal_context.acquire_token_with_client_credentials(
-                self.loganalytics_cluster,
-                self.client_id,
-                self.client_secret)
+            token_response = self.adal_context.acquire_token_with_client_credentials(self.loganalytics_cluster, self.client_id, self.client_secret)
         elif self.username is not None and self.password is not None:
             token_response = self.adal_context.acquire_token_with_username_password(
-                self.loganalytics_cluster,
-                self.username,
-                self.password,
-                self.client_id)
+                self.loganalytics_cluster, self.username, self.password, self.client_id
+            )
         else:
             code = self.adal_context.acquire_user_code(self.loganalytics_cluster, self.client_id)
             # print(code['message'])
             # webbrowser.open(code['verification_url'])
             token_response = self.adal_context.acquire_token_with_device_code(self.loganalytics_cluster, code, self.client_id)
 
-        return token_response['accessToken']
+        return token_response["accessToken"]

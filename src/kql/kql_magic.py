@@ -1,8 +1,10 @@
 import os
 import time
 import logging
+
 # to avoid "No handler found" warnings.
-from kql.log  import KQLMAGIC_LOGGER_NAME
+from kql.log import KQLMAGIC_LOGGER_NAME
+
 logging.getLogger(KQLMAGIC_LOGGER_NAME).addHandler(logging.NullHandler())
 
 from IPython.core.magic import Magics, magics_class, cell_magic, line_magic, needs_local_scope
@@ -23,15 +25,13 @@ from kql.la_client import LoganalyticsError
 from kql.results import ResultSet
 from kql.parser import Parser
 
-from kql.log  import Logger, logger, set_logger, create_log_context, set_logging_options
-from kql.display  import Display
-from kql.database_html  import Database_html
+from kql.log import Logger, logger, set_logger, create_log_context, set_logging_options
+from kql.display import Display
+from kql.database_html import Database_html
 from kql.help_html import Help_html
 from kql.kusto_engine import KustoEngine
 from kql.kql_engine import KqlEngineError
 from kql.palette import Palettes, Palette
-
-
 
 
 @magics_class
@@ -40,68 +40,97 @@ class Kqlmagic(Magics, Configurable):
 
     Provides the %%kql magic."""
 
-
     auto_limit = Int(0, config=True, allow_none=True, help="Automatically limit the size of the returned result sets. Abbreviation: al")
-    prettytable_style = Enum(['DEFAULT', 'MSWORD_FRIENDLY', 'PLAIN_COLUMNS', 'RANDOM'], 'DEFAULT', config=True, help="Set the table printing style to any of prettytable's defined styles. Abbreviation: ptst")
+    prettytable_style = Enum(
+        ["DEFAULT", "MSWORD_FRIENDLY", "PLAIN_COLUMNS", "RANDOM"],
+        "DEFAULT",
+        config=True,
+        help="Set the table printing style to any of prettytable's defined styles. Abbreviation: ptst",
+    )
     short_errors = Bool(True, config=True, help="Don't display the full traceback on KQL Programming Error. Abbreviation: se")
-    display_limit = Int(None, config=True, allow_none=True, help="Automatically limit the number of rows displayed (full result set is still stored). Abbreviation: dl")
+    display_limit = Int(
+        None,
+        config=True,
+        allow_none=True,
+        help="Automatically limit the number of rows displayed (full result set is still stored). Abbreviation: dl",
+    )
     auto_dataframe = Bool(False, config=True, help="Return Pandas dataframe instead of regular result sets. Abbreviation: ad")
     columns_to_local_vars = Bool(False, config=True, help="Return data into local variables from column names. Abbreviation: c2lv")
     feedback = Bool(True, config=True, help="Show number of records returned, and assigned variables. Abbreviation: f")
-    show_conn_info = Enum(['list', 'current', 'None'], 'current', config=True, allow_none=True, help="Show connection info, either current, the whole list, or None. Abbreviation: sci")
-    dsn_filename = Unicode('odbc.ini', config=True, help="Path to DSN file. "
-                           "When the first argument is of the form [section], "
-                           "a kql connection string is formed from the "
-                           "matching section in the DSN file. Abbreviation: dl")
-    plot_package = Enum(['matplotlib', 'plotly'], 'plotly', config=True, help="Set the plot package. Abbreviation: pp")
-    table_package = Enum(['prettytable', 'pandas', 'plotly', 'qgrid'], 'prettytable', config=True, help="Set the table display package. Abbreviation: tp")
-    last_raw_result_var = Unicode('_kql_raw_result_', config=True, help="Set the name of the variable that will contain last raw result. Abbreviation: var")
+    show_conn_info = Enum(
+        ["list", "current", "None"],
+        "current",
+        config=True,
+        allow_none=True,
+        help="Show connection info, either current, the whole list, or None. Abbreviation: sci",
+    )
+    dsn_filename = Unicode(
+        "odbc.ini",
+        config=True,
+        help="Path to DSN file. "
+        "When the first argument is of the form [section], "
+        "a kql connection string is formed from the "
+        "matching section in the DSN file. Abbreviation: dl",
+    )
+    plot_package = Enum(["matplotlib", "plotly"], "plotly", config=True, help="Set the plot package. Abbreviation: pp")
+    table_package = Enum(
+        ["prettytable", "pandas", "plotly", "qgrid"], "prettytable", config=True, help="Set the table display package. Abbreviation: tp"
+    )
+    last_raw_result_var = Unicode(
+        "_kql_raw_result_", config=True, help="Set the name of the variable that will contain last raw result. Abbreviation: var"
+    )
     enable_suppress_result = Bool(True, config=True, help="Suppress result when magic ends with a semicolon ;. Abbreviation: esr")
     show_query_time = Bool(True, config=True, help="Print query execution elapsed time. Abbreviation: sqt")
-    plotly_fs_includejs = Bool(False, config=True, help="Include plotly javascript code in popup window. If set to False (default), it download the script from https://cdn.plot.ly/plotly-latest.min.js. Abbreviation: pfi")
+    plotly_fs_includejs = Bool(
+        False,
+        config=True,
+        help="Include plotly javascript code in popup window. If set to False (default), it download the script from https://cdn.plot.ly/plotly-latest.min.js. Abbreviation: pfi",
+    )
 
-    validate_connection_string = Bool(True, config=True, help="Validate connectionString with an implicit query, when query statement is missing. Abbreviation: vc")
+    validate_connection_string = Bool(
+        True, config=True, help="Validate connectionString with an implicit query, when query statement is missing. Abbreviation: vc"
+    )
     auto_popup_schema = Bool(True, config=True, help="Popup schema when connecting to a new database. Abbreviation: aps")
 
-    json_display = Enum(['raw', 'native', 'formatted'], 'formatted', config=True, help="Set json/dict display format. Abbreviation: jd")
+    json_display = Enum(["raw", "native", "formatted"], "formatted", config=True, help="Set json/dict display format. Abbreviation: jd")
     palette_name = Unicode(Palettes.DEFAULT_NAME, config=True, help="Set pallete by name to be used for charts. Abbreviation: pn")
     palette_colors = Int(Palettes.DEFAULT_N_COLORS, config=True, help="Set pallete number of colors to be used for charts. Abbreviation: pc")
     palette_desaturation = Float(Palettes.DEFAULT_DESATURATION, config=True, help="Set pallete desaturation to be used for charts. Abbreviation: pd")
 
-    showfiles_folder_name = Unicode('temp_showfiles', config=True, help="Set the name of folder for temporary popup files")
+    showfiles_folder_name = Unicode("temp_showfiles", config=True, help="Set the name of folder for temporary popup files")
 
     # valid values: jupyterlab or jupyternotebook
-    notebook_app = Enum(['jupyterlab', 'jupyternotebook'], 'jupyternotebook', config=True, help="Set notebook application used.")
+    notebook_app = Enum(["jupyterlab", "jupyternotebook"], "jupyternotebook", config=True, help="Set notebook application used.")
 
     add_kql_ref_to_help = Bool(True, config=True, help="On Kqlmagic load auto add kql reference to Help menu.")
     add_schema_to_help = Bool(True, config=True, help="On connection to database@cluster add  schema to Help menu.")
 
-    @validate('palette_name')
+    @validate("palette_name")
     def _valid_value_palette_name(cls, proposal):
         try:
-            Palette.validate_palette_name(proposal['value'])
+            Palette.validate_palette_name(proposal["value"])
         except AttributeError as e:
-            message = 'The \'palette_name\' trait of a Kqlmagic instance ' + str(e)
+            message = "The 'palette_name' trait of a Kqlmagic instance " + str(e)
             raise TraitError(message)
-        return proposal['value']
+        return proposal["value"]
 
-    @validate('palette_desaturation')
+    @validate("palette_desaturation")
     def _valid_value_palette_desaturation(cls, proposal):
         try:
-            Palette.validate_palette_desaturation(proposal['value'])
+            Palette.validate_palette_desaturation(proposal["value"])
         except AttributeError as e:
-            message = 'The \'palette_desaturation\' trait of a Kqlmagic instance ' + str(e)
+            message = "The 'palette_desaturation' trait of a Kqlmagic instance " + str(e)
             raise TraitError(message)
-        return proposal['value']
+        return proposal["value"]
 
-    @validate('palette_colors')
+    @validate("palette_colors")
     def _valid_value_palette_color(cls, proposal):
         try:
-            Palette.validate_palette_colors(proposal['value'])
+            Palette.validate_palette_colors(proposal["value"])
         except AttributeError as e:
-            message = 'The \'palette_color\' trait of a Kqlmagic instance ' + str(e)
+            message = "The 'palette_color' trait of a Kqlmagic instance " + str(e)
             raise TraitError(message)
-        return proposal['value']
+        return proposal["value"]
 
     # [KUSTO]
     # Driver          = Easysoft ODBC-SQL Server
@@ -120,7 +149,7 @@ class Kqlmagic(Magics, Configurable):
 
         set_logger(Logger())
 
-        get_ipython().magic('matplotlib inline')
+        get_ipython().magic("matplotlib inline")
 
         # Add ourself to the list of module configurable via %config
         self.shell.configurables.append(self)
@@ -128,7 +157,7 @@ class Kqlmagic(Magics, Configurable):
         ip = get_ipython()
         kql_magic_load_mode = _get_kql_magic_load_mode()
 
-        if kql_magic_load_mode != 'silent':
+        if kql_magic_load_mode != "silent":
             html_str = """<html>
             <head>
             <style>
@@ -158,37 +187,35 @@ class Kqlmagic(Magics, Configurable):
             </body>
             </html>"""
             Display.show(html_str)
-            Display.showInfoMessage("""Kqlmagic version: """ +VERSION+ """, source: https://github.com/mbnshtck/jupyter-kql-magic""")
-            #<div><img src='https://az818438.vo.msecnd.net/icons/kusto.png'></div>
+            Display.showInfoMessage("""Kqlmagic version: """ + VERSION + """, source: https://github.com/mbnshtck/jupyter-kql-magic""")
+            # <div><img src='https://az818438.vo.msecnd.net/icons/kusto.png'></div>
         _override_default_configuration(ip, kql_magic_load_mode)
 
-        root_path = get_ipython().starting_dir.replace('\\', '/')
+        root_path = get_ipython().starting_dir.replace("\\", "/")
 
-        folder_name = ip.run_line_magic('config', 'Kqlmagic.showfiles_folder_name')
-        showfiles_folder_Full_name = root_path + '/' + folder_name
+        folder_name = ip.run_line_magic("config", "Kqlmagic.showfiles_folder_name")
+        showfiles_folder_Full_name = root_path + "/" + folder_name
         if not os.path.exists(showfiles_folder_Full_name):
             os.makedirs(showfiles_folder_Full_name)
-         # ipython will removed folder at shutdown or by restart
+        # ipython will removed folder at shutdown or by restart
         ip.tempdirs.append(showfiles_folder_Full_name)
         Display.showfiles_base_path = root_path
-        Display.showfiles_folder_name =  Help_html.showfiles_folder_name = folder_name
-        Display.notebooks_host = Help_html.notebooks_host = os.getenv('AZURE_NOTEBOOKS_HOST')
+        Display.showfiles_folder_name = Help_html.showfiles_folder_name = folder_name
+        Display.notebooks_host = Help_html.notebooks_host = os.getenv("AZURE_NOTEBOOKS_HOST")
 
-        app = ip.run_line_magic('config', 'Kqlmagic.notebook_app')
+        app = ip.run_line_magic("config", "Kqlmagic.notebook_app")
         # add help link
-        add_kql_ref_to_help = ip.run_line_magic('config', 'Kqlmagic.add_kql_ref_to_help')
+        add_kql_ref_to_help = ip.run_line_magic("config", "Kqlmagic.add_kql_ref_to_help")
         if add_kql_ref_to_help:
-            Help_html.add_menu_item('kql Reference', 'http://aka.ms/kdocs', notebook_app = app)
-        if  app is None or app != 'jupyterlab':
+            Help_html.add_menu_item("kql Reference", "http://aka.ms/kdocs", notebook_app=app)
+        if app is None or app != "jupyterlab":
             display(Javascript("""IPython.notebook.kernel.execute("NOTEBOOK_URL = '" + window.location + "'");"""))
             time.sleep(5)
 
-
-
     @needs_local_scope
-    @line_magic('kql')
-    @cell_magic('kql')
-    def execute(self, line, cell='', local_ns={}):
+    @line_magic("kql")
+    @cell_magic("kql")
+    def execute(self, line, cell="", local_ns={}):
         """Query Kusto or ApplicationInsights using kusto query language (kql). Repository specified by a connect string.
 
         Magic Syntax::
@@ -292,7 +319,7 @@ class Kqlmagic(Magics, Configurable):
         logger().debug("To Parsed: \n\rline: {}\n\rcell:\n\r{}".format(line, cell))
         try:
             parsed = None
-            parsed_queries = Parser.parse('%s\n%s' % (line, cell), self)
+            parsed_queries = Parser.parse("%s\n%s" % (line, cell), self)
             logger().debug("Parsed: {}".format(parsed_queries))
             result = None
             for parsed in parsed_queries:
@@ -300,7 +327,7 @@ class Kqlmagic(Magics, Configurable):
             return result
         except Exception as e:
             if parsed:
-                if parsed['options'].get('short_errors', self.short_errors):
+                if parsed["options"].get("short_errors", self.short_errors):
                     Display.showDangerMessage(str(e))
                     return None
             elif self.short_errors:
@@ -309,10 +336,10 @@ class Kqlmagic(Magics, Configurable):
             raise
 
     def _get_connection_info(self, **options):
-        mode = options.get('show_conn_info', self.show_conn_info)
-        if mode == 'current':
+        mode = options.get("show_conn_info", self.show_conn_info)
+        if mode == "current":
             return Connection.get_connection_list_formatted()
-        elif mode == 'list':
+        elif mode == "list":
             return [Connection.get_current_connection_formatted()]
         return []
 
@@ -322,59 +349,54 @@ class Kqlmagic(Magics, Configurable):
             Display.showInfoMessage(msg)
 
     def submit_get_notebook_url(self):
-        if self.notebook_app != 'jupyterlab':
+        if self.notebook_app != "jupyterlab":
             display(Javascript("""IPython.notebook.kernel.execute("NOTEBOOK_URL = '" + window.location + "'");"""))
 
-    def execute_query(self, parsed, user_ns, result_set = None):
+    def execute_query(self, parsed, user_ns, result_set=None):
         if Help_html.showfiles_base_url is None:
             window_location = user_ns.get("NOTEBOOK_URL")
             if window_location is not None:
-                Help_html.flush(window_location, notebook_app =  self.notebook_app)
+                Help_html.flush(window_location, notebook_app=self.notebook_app)
             else:
                 self.submit_get_notebook_url()
 
-        query = parsed['kql'].strip()
-        options = parsed['options']
-        suppress_results = options.get('suppress_results', False) and options.get('enable_suppress_result', self.enable_suppress_result)
-        connection_string = parsed['connection']
+        query = parsed["kql"].strip()
+        options = parsed["options"]
+        suppress_results = options.get("suppress_results", False) and options.get("enable_suppress_result", self.enable_suppress_result)
+        connection_string = parsed["connection"]
 
         special_info = False
-        if options.get('version'):
-            print('Kqlmagic version: ' + VERSION)
+        if options.get("version"):
+            print("Kqlmagic version: " + VERSION)
             special_info = True
 
-        if options.get('palette'):
+        if options.get("palette"):
             palette = Palette(
-                palette_name=options.get('palette_name', self.palette_name), 
-                n_colors=options.get('palette_colors',self.palette_colors),
-                desaturation=options.get('palette_desaturation', self.palette_desaturation),
-                to_reverse=options.get('palette_reverse', False))
+                palette_name=options.get("palette_name", self.palette_name),
+                n_colors=options.get("palette_colors", self.palette_colors),
+                desaturation=options.get("palette_desaturation", self.palette_desaturation),
+                to_reverse=options.get("palette_reverse", False),
+            )
             html_str = palette._repr_html_()
             Display.show(html_str)
             special_info = True
 
-        if options.get('popup_palettes'):
-            n_colors = options.get('palette_colors',self.palette_colors)
-            desaturation=options.get('palette_desaturation', self.palette_desaturation)
-            palettes = Palettes(
-                n_colors=n_colors, 
-                desaturation=desaturation)
+        if options.get("popup_palettes"):
+            n_colors = options.get("palette_colors", self.palette_colors)
+            desaturation = options.get("palette_desaturation", self.palette_desaturation)
+            palettes = Palettes(n_colors=n_colors, desaturation=desaturation)
             html_str = palettes._repr_html_()
-            button_text='popup {0} colors palettes'.format(n_colors)
-            file_name='{0}_colors_palettes'.format(n_colors) 
+            button_text = "popup {0} colors palettes".format(n_colors)
+            file_name = "{0}_colors_palettes".format(n_colors)
             if desaturation is not None and desaturation != 1.0 and desaturation != 0:
-                file_name += '_desaturation{0}'.format(str(desaturation))
-                button_text += ' (desaturation {0})'.format(str(desaturation))
+                file_name += "_desaturation{0}".format(str(desaturation))
+                button_text += " (desaturation {0})".format(str(desaturation))
             file_path = Display._html_to_file_path(html_str, file_name, **options)
-            Display.show_window(
-                file_name, 
-                file_path, 
-                button_text = button_text,
-                onclick_visibility ='visible')
+            Display.show_window(file_name, file_path, button_text=button_text, onclick_visibility="visible")
             special_info = True
 
-        if options.get('popup_help'):
-            help_url = 'http://aka.ms/kdocs'
+        if options.get("popup_help"):
+            help_url = "http://aka.ms/kdocs"
             # 'https://docs.loganalytics.io/docs/Language-Reference/Tabular-operators'
             # 'http://aka.ms/kdocs'
             # 'https://kusdoc2.azurewebsites.net/docs/queryLanguage/query-essentials/readme.html'
@@ -382,8 +404,8 @@ class Kqlmagic(Magics, Configurable):
             # f = requests.get(help_url)
             # html = f.text.replace('width=device-width','width=500')
             # Display.show(html, **{"popup_window" : True, 'name': 'KustoQueryLanguage'})
-            button_text = 'popup kql help '
-            Display.show_window('KustoQueryLanguage', help_url, button_text, onclick_visibility ='visible')
+            button_text = "popup kql help "
+            Display.show_window("KustoQueryLanguage", help_url, button_text, onclick_visibility="visible")
             special_info = True
 
         if special_info and not query and not connection_string:
@@ -397,7 +419,7 @@ class Kqlmagic(Magics, Configurable):
 
         # parse error
         except KqlEngineError as e:
-            if options.get('short_errors', self.short_errors):
+            if options.get("short_errors", self.short_errors):
                 msg = Connection.tell_format(connect_str)
                 Display.showDangerMessage(str(e))
                 Display.showInfoMessage(msg)
@@ -407,50 +429,52 @@ class Kqlmagic(Magics, Configurable):
 
         # parse error
         except ConnectionError as e:
-            if options.get('short_errors', self.short_errors):
+            if options.get("short_errors", self.short_errors):
                 Display.showDangerMessage(str(e))
-                self._show_connection_info(show_conn_info = 'list')
+                self._show_connection_info(show_conn_info="list")
                 return None
             else:
                 raise
 
         try:
             # validate connection
-            if not conn.options.get('validate_connection_string_done') and options.get('validate_connection_string', self.validate_connection_string):
+            if not conn.options.get("validate_connection_string_done") and options.get("validate_connection_string", self.validate_connection_string):
                 retry_with_code = False
-                validation_query = 'range c from 1 to 10 step 1 | count'
+                validation_query = "range c from 1 to 10 step 1 | count"
                 try:
                     raw_query_result = conn.execute(validation_query, **options)
                     conn.set_validation_result(True)
                 except Exception as e:
                     msg = str(e)
-                    if msg.find('AADSTS50079') > 0 and msg.find('multi-factor authentication') > 0 and isinstance(conn, KustoEngine):
+                    if msg.find("AADSTS50079") > 0 and msg.find("multi-factor authentication") > 0 and isinstance(conn, KustoEngine):
                         Display.showDangerMessage(str(e))
                         retry_with_code = True
                     else:
                         raise e
 
                 if retry_with_code:
-                    Display.showInfoMessage('replaced connection with code authentication')
+                    Display.showInfoMessage("replaced connection with code authentication")
                     database_name = conn.get_database()
                     cluster_name = conn.get_cluster()
-                    connection_string = "kusto://code().cluster('" +cluster_name+ "').database('" +database_name+ "')"
+                    connection_string = "kusto://code().cluster('" + cluster_name + "').database('" + database_name + "')"
                     conn = Connection.get_connection(connection_string)
                     raw_query_result = conn.execute(validation_query, **options)
                     conn.set_validation_result(True)
 
-            conn.options['validate_connection_string_done'] = True
+            conn.options["validate_connection_string_done"] = True
 
             schema_file_path = None
-            if options.get('popup_schema') or (not conn.options.get('auto_popup_schema_done') and options.get('auto_popup_schema', self.auto_popup_schema)):
+            if options.get("popup_schema") or (
+                not conn.options.get("auto_popup_schema_done") and options.get("auto_popup_schema", self.auto_popup_schema)
+            ):
                 schema_file_path = Database_html.get_schema_file_path(conn)
                 Database_html.popup_schema(schema_file_path, conn.get_conn_name())
 
-            conn.options['auto_popup_schema_done'] = True
-            if not conn.options.get('add_schema_to_help_done') and options.get('add_schema_to_help'):
+            conn.options["auto_popup_schema_done"] = True
+            if not conn.options.get("add_schema_to_help_done") and options.get("add_schema_to_help"):
                 schema_file_path = schema_file_path or Database_html.get_schema_file_path(conn)
                 Help_html.add_menu_item(conn.get_conn_name(), schema_file_path, **options)
-                conn.options['add_schema_to_help_done'] = True
+                conn.options["add_schema_to_help_done"] = True
 
             if not query:
                 #
@@ -473,7 +497,7 @@ class Kqlmagic(Magics, Configurable):
             #
             if result_set is None:
                 fork_table_id = 0
-                saved_result = ResultSet(raw_query_result, query, fork_table_id = 0, fork_table_resultSets = {}, metadata = {}, options = options)
+                saved_result = ResultSet(raw_query_result, query, fork_table_id=0, fork_table_resultSets={}, metadata={}, options=options)
                 saved_result.metadata["magic"] = self
                 saved_result.metadata["parsed"] = parsed
                 saved_result.metadata["connection"] = conn.get_conn_name()
@@ -493,29 +517,29 @@ class Kqlmagic(Magics, Configurable):
             saved_result.metadata["start_time"] = start_time
             saved_result.metadata["end_time"] = end_time
 
-            if options.get('feedback', self.feedback):
+            if options.get("feedback", self.feedback):
                 minutes, seconds = divmod(end_time - start_time, 60)
-                saved_result.feedback_info.append('Done ({:0>2}:{:06.3f}): {} records'.format(int(minutes), seconds, saved_result.records_count))
+                saved_result.feedback_info.append("Done ({:0>2}:{:06.3f}): {} records".format(int(minutes), seconds, saved_result.records_count))
 
-            if options.get('columns_to_local_vars', self.columns_to_local_vars):
-                #Instead of returning values, set variables directly in the
-                #users namespace. Variable names given by column names
+            if options.get("columns_to_local_vars", self.columns_to_local_vars):
+                # Instead of returning values, set variables directly in the
+                # users namespace. Variable names given by column names
 
-                if options.get('feedback', self.feedback):
-                    saved_result.feedback_info.append('Returning raw data to local variables')
+                if options.get("feedback", self.feedback):
+                    saved_result.feedback_info.append("Returning raw data to local variables")
 
                 self.shell.user_ns.update(saved_result.to_dict())
                 result = None
 
-            if options.get('auto_dataframe', self.auto_dataframe):
-                if options.get('feedback', self.feedback):
-                    saved_result.feedback_info.append('Returning data converted to pandas dataframe')
+            if options.get("auto_dataframe", self.auto_dataframe):
+                if options.get("feedback", self.feedback):
+                    saved_result.feedback_info.append("Returning data converted to pandas dataframe")
                 result = saved_result.to_dataframe()
 
-            if options.get('result_var') and result_set is None:
-                result_var = options['result_var']
-                if options.get('feedback', self.feedback):
-                    saved_result.feedback_info.append('Returning data to local variable {}'.format(result_var))
+            if options.get("result_var") and result_set is None:
+                result_var = options["result_var"]
+                if options.get("feedback", self.feedback):
+                    saved_result.feedback_info.append("Returning data to local variable {}".format(result_var))
                 self.shell.user_ns.update({result_var: result if result is not None else saved_result})
                 result = None
 
@@ -524,11 +548,10 @@ class Kqlmagic(Magics, Configurable):
             if result is not None:
                 if suppress_results:
                     saved_result.suppress_result = True
-                elif options.get('auto_dataframe', self.auto_dataframe):
+                elif options.get("auto_dataframe", self.auto_dataframe):
                     Display.showSuccessMessage(saved_result.feedback_info)
                 else:
                     saved_result.display_info = True
-
 
             if result_set is None:
                 saved_result._create_fork_results()
@@ -536,7 +559,7 @@ class Kqlmagic(Magics, Configurable):
                 saved_result._update_fork_results()
 
             # Return results into the default ipython _ variable
-            self.shell.user_ns.update({ options.get('last_raw_result_var', self.last_raw_result_var) : saved_result })
+            self.shell.user_ns.update({options.get("last_raw_result_var", self.last_raw_result_var): saved_result})
 
             if result == saved_result:
                 result = saved_result.fork_result(fork_table_id)
@@ -547,12 +570,11 @@ class Kqlmagic(Magics, Configurable):
                 # display list of all connections
                 self._show_connection_info(**options)
 
-            if options.get('short_errors', self.short_errors):
+            if options.get("short_errors", self.short_errors):
                 Display.showDangerMessage(e)
                 return None
             else:
                 raise e
-
 
 
 def load_ipython_extension(ip):
@@ -567,10 +589,12 @@ def load_ipython_extension(ip):
     _set_default_connections()
     return result
 
+
 def unload_ipython_extension(ip):
     """Unoad the extension in Jupyter."""
-    del ip.magics_manager.magics['cell']['kql']
-    del ip.magics_manager.magics['line']['kql']
+    del ip.magics_manager.magics["cell"]["kql"]
+    del ip.magics_manager.magics["line"]["kql"]
+
 
 def _override_default_configuration(ip, load_mode):
     """override default Kqlmagic configuration from environment variable KQLMAGIC_CONFIGURATION.
@@ -578,25 +602,26 @@ def _override_default_configuration(ip, load_mode):
        for example:
        KQLMAGIC_CONFIGURATION = 'auto_limit = 1000; auto_dataframe = True' """
 
-    kql_magic_configuration = os.getenv('KQLMAGIC_CONFIGURATION')
+    kql_magic_configuration = os.getenv("KQLMAGIC_CONFIGURATION")
     if kql_magic_configuration:
         kql_magic_configuration = kql_magic_configuration.strip()
         if kql_magic_configuration.startswith("'") or kql_magic_configuration.startswith('"'):
             kql_magic_configuration = kql_magic_configuration[1:-1]
 
-        pairs = kql_magic_configuration.split(';')
+        pairs = kql_magic_configuration.split(";")
         for pair in pairs:
-            ip.run_line_magic('config',  'Kqlmagic.{0}'.format(pair.strip()))
+            ip.run_line_magic("config", "Kqlmagic.{0}".format(pair.strip()))
 
-    app = os.getenv('KQLMAGIC_NOTEBOOK_APP')
+    app = os.getenv("KQLMAGIC_NOTEBOOK_APP")
     if app is not None:
-        app = app.lower().strip().strip('"\'').replace('-', '').replace('/', '')
-        app = {'jupyterlab':'jupyterlab', 'jupyternotebook':'jupyternotebook', 'lab':'jupyterlab', 'notebook': 'jupyternotebook'}.get(app)
+        app = app.lower().strip().strip("\"'").replace("-", "").replace("/", "")
+        app = {"jupyterlab": "jupyterlab", "jupyternotebook": "jupyternotebook", "lab": "jupyterlab", "notebook": "jupyternotebook"}.get(app)
         if app is not None:
-            ip.run_line_magic('config',  'Kqlmagic.notebook_app = "{0}"'.format(app.strip()))
+            ip.run_line_magic("config", 'Kqlmagic.notebook_app = "{0}"'.format(app.strip()))
+
 
 def _get_kql_magic_load_mode():
-    kql_magic_load_mode = os.getenv('KQLMAGIC_LOAD_MODE')
+    kql_magic_load_mode = os.getenv("KQLMAGIC_LOAD_MODE")
     if kql_magic_load_mode:
         kql_magic_load_mode = kql_magic_load_mode.strip().lower()
         if kql_magic_load_mode.startswith("'") or kql_magic_load_mode.startswith('"'):
@@ -605,16 +630,17 @@ def _get_kql_magic_load_mode():
 
 
 def _set_default_connections():
-    kql_magic_connection_str = os.getenv('KQLMAGIC_CONNECTION_STR')
+    kql_magic_connection_str = os.getenv("KQLMAGIC_CONNECTION_STR")
     if kql_magic_connection_str:
         kql_magic_connection_str = kql_magic_connection_str.strip()
         if kql_magic_connection_str.startswith("'") or kql_magic_connection_str.startswith('"'):
             kql_magic_connection_str = kql_magic_connection_str[1:-1]
 
         ip = get_ipython()
-        result = ip.run_line_magic('kql',  kql_magic_connection_str)
-        if result and _get_kql_magic_load_mode() != 'silent':
+        result = ip.run_line_magic("kql", kql_magic_connection_str)
+        if result and _get_kql_magic_load_mode() != "silent":
             print(result)
+
 
 """
 FAQ
