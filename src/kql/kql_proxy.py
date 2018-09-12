@@ -117,6 +117,10 @@ class KqlTableResponse(object):
     def types(self):
         return self.data_table.columns_type
 
+    @property
+    def datafarme_types(self):
+        return [self.KQL_TO_DATAFRAME_DATA_TYPES.get(t) for t in self.data_table.columns_type]
+
     def visualization_property(self, name):
         " returns value of attribute: Visualization, Title, Accumulate, IsQuerySorted, Kind, Annotation, By"
         if not self.visualization_properties:
@@ -154,12 +158,12 @@ class KqlTableResponse(object):
                 )
             elif col_type.lower() == "dynamic":
                 frame[col_name] = frame[col_name].apply(lambda x: json.loads(x) if x else None)
-            elif col_type in self._kusto_to_data_frame_data_types:
-                pandas_type = self._kusto_to_data_frame_data_types[col_type]
+            elif col_type in self.KQL_TO_DATAFRAME_DATA_TYPES:
+                pandas_type = self.KQL_TO_DATAFRAME_DATA_TYPES[col_type]
                 frame[col_name] = frame[col_name].astype(pandas_type, errors=errors)
         return frame
 
-    _kusto_to_data_frame_data_types = {
+    KQL_TO_DATAFRAME_DATA_TYPES = {
         "bool": "bool",
         "uint8": "int64",
         "int16": "int64",
@@ -186,6 +190,8 @@ class KqlTableResponse(object):
         "Guid": "object",
         "TimeSpan": "object",
     }
+
+
 
 
 class FakeResultProxy(object):

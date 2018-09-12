@@ -182,6 +182,7 @@ class ResultSet(list, ColumnGuesserMixin):
         # schema
         self.columns_name = queryResultTable.keys()
         self.columns_type = queryResultTable.types()
+        self.columns_datafarme_type = queryResultTable.datafarme_types
         self.field_names = _unduplicate_field_names(self.columns_name)
         self.pretty = PrettyTable(self.field_names, style=self.prettytable_style) if len(self.field_names) > 0 else None
         self.records_count = queryResultTable.recordscount()
@@ -764,25 +765,27 @@ class ResultSet(list, ColumnGuesserMixin):
         through to ``matplotlib.pylab.plot``.
         """
 
-        self.build_columns()
-        quantity_columns = [c for c in self.columns[1:] if c.is_quantity]
-        if len(quantity_columns) < 1:
+        self._build_chart_sub_tables()
+        if len(self.chart_sub_tables) < 1:
             return None
+        ylabel_names = []
+        for tab in self.chart_sub_tables:
+            if tab.col_y.name not in ylabel_names:
+                ylabel_names.append(tab.col_y.name)
+        ylabel = ", ".join(ylabel_names)
+        xlabel = self.chart_sub_tables[0].col_x.name
+        n_colors = len(self.chart_sub_tables)
 
-        xticks = self.columns[0]
-        ys = quantity_columns
-        ylabel = ", ".join([c.name for c in ys])
-        xlabel = xticks.name
         data = [
             go.Scatter(
-                x=xticks,
-                y=yticks,
-                name=yticks.name,
+                x=list(tab.keys()),
+                y=list(tab.values()),
+                name=tab.name,
                 mode="lines",
-                line=dict(width=0.5, color=self.get_color_from_palette(idx, n_colors=len(ys))),
-                fill="tozerox",
+                line=dict(width=0.5, color=self.get_color_from_palette(idx, n_colors=n_colors)),
+                fill="tozeroy",
             )
-            for idx, yticks in enumerate(ys)
+            for idx, tab in enumerate(self.chart_sub_tables)
         ]
         layout = go.Layout(
             title=title or "areachart",
@@ -817,32 +820,34 @@ class ResultSet(list, ColumnGuesserMixin):
         through to ``matplotlib.pylab.plot``.
         """
 
-        self.build_columns()
-        quantity_columns = [c for c in self.columns if c.is_quantity]
-        if len(quantity_columns) < 2:
-            return None
-        if not quantity_columns[0].is_datetime:
-            return None
 
-        xticks = quantity_columns[0]
-        ys = quantity_columns[1:]
+        self._build_chart_sub_tables()
+        if len(self.chart_sub_tables) < 1:
+            return None
+        ylabel_names = []
+        for tab in self.chart_sub_tables:
+            if tab.col_y.name not in ylabel_names:
+                ylabel_names.append(tab.col_y.name)
+        ylabel = ", ".join(ylabel_names)
+        xlabel = self.chart_sub_tables[0].col_x.name
+        n_colors = len(self.chart_sub_tables)
+
         ys_stcks = []
-        y_stck = [0 for x in range(len(ys[0]))]
-        for y in ys:
-            y_stck = [r + y_stck[idx] for (idx, r) in enumerate(y)]
+        y_stck = [0 for x in range(len(self.chart_sub_tables[0]))]
+        for tab in self.chart_sub_tables:
+            y_stck = [(r or 0) + y_stck[idx]  for (idx, r) in enumerate(tab.values())]
             ys_stcks.append(y_stck)
-        ylabel = ", ".join([c.name for c in ys])
-        xlabel = xticks.name
+
         data = [
             go.Scatter(
-                x=xticks,
-                y=yticks,
-                name=ys[idx].name,
+                x=list(tab.keys()),
+                y=ys_stcks[idx],
+                name=tab.name,
                 mode="lines",
-                line=dict(width=0.5, color=self.get_color_from_palette(idx, n_colors=len(ys_stcks))),
+                line=dict(width=0.5, color=self.get_color_from_palette(idx, n_colors=n_colors)),
                 fill="tonexty",
             )
-            for idx, yticks in enumerate(ys_stcks)
+            for idx, tab in enumerate(self.chart_sub_tables)
         ]
         layout = go.Layout(
             title=title or "stackedareachart",
@@ -924,15 +929,19 @@ class ResultSet(list, ColumnGuesserMixin):
 
     def _render_piechart_plotly(self, key_word_sep=" ", title=None, **kwargs):
 
-        self.build_columns()
-        quantity_columns = [c for c in self.columns[1:] if c.is_quantity]
+        self._build_chart_sub_tables()
+        if len(self.chart_sub_tables) < 1:
+            return None
+        ylabel_names = []
+        for tab in self.chart_sub_tables:
+            if tab.col_y.name not in ylabel_names:
+                ylabel_names.append(tab.col_y.name)
+        ylabel = ", ".join(ylabel_names)
+        xlabel = self.chart_sub_tables[0].col_x.name
+        n_colors = len(self.chart_sub_tables[0])
 
         # number of pies to display
-        pies = len(quantity_columns)
-
-        # no pies to display
-        if pies < 1:
-            return None
+        pies = len(self.chart_sub_tables)
 
         max_pies_in_row = 5
         pies_in_row = max_pies_in_row if pies >= max_pies_in_row else pies
@@ -951,58 +960,53 @@ class ResultSet(list, ColumnGuesserMixin):
             for i in range(0, pies)
         ]
 
-        xticks = self.columns[0]
-        ys = quantity_columns
-        ylabel = ", ".join([c.name for c in ys])
-        xlabel = xticks.name
-        palette = self._get_palette(n_colors=len(xticks))
+        palette = self._get_palette(n_colors=n_colors)
         data = [
-            go.Pie(labels=xticks, values=yticks, domain=domains[idx], marker=dict(colors=palette), name=yticks.name, textinfo="label+percent")
-            for idx, yticks in enumerate(ys)
+            go.Pie(
+                labels=list(tab.keys()), 
+                values=list(tab.values()), 
+                domain=domains[idx], 
+                marker=dict(colors=palette), 
+                name=tab.name, 
+                textinfo="label+percent")
+            for idx, tab in enumerate(self.chart_sub_tables)
         ]
         layout = go.Layout(
             title=title or "piechart",
             showlegend=True,
             annotations=[
                 dict(
-                    text=yticks.name,
+                    text=tab.name,
                     showarrow=False,
                     x=(domains[idx].get("x")[0] + domains[idx].get("x")[1]) / 2,
                     y=domains[idx].get("y")[0] - 0.05 * ydelta,
                 )
-                for idx, yticks in enumerate(ys)
+                for idx, tab in enumerate(self.chart_sub_tables)
             ],
-        )
-
-        layout1 = go.Layout(
-            title=title or "piechart",
-            showlegend=True,
-            xaxis=dict(title=xlabel, type="category"),
-            yaxis=dict(
-                title=ylabel,
-                type="linear",
-                # range=[0, 3],
-                # dtick=20,
-                ticksuffix="",
-            ),
         )
         fig = go.Figure(data=data, layout=layout)
         return fig
 
     def _render_barchart_plotly(self, key_word_sep=" ", title=None, **kwargs):
 
-        self.build_columns()
-        quantity_columns = [c for c in self.columns[1:] if c.is_quantity]
-        if len(quantity_columns) < 1:
+        self._build_chart_sub_tables()
+        if len(self.chart_sub_tables) < 1:
             return None
+        ylabel_names = []
+        for tab in self.chart_sub_tables:
+            if tab.col_y.name not in ylabel_names:
+                ylabel_names.append(tab.col_y.name)
+        ylabel = ", ".join(ylabel_names)
+        xlabel = self.chart_sub_tables[0].col_x.name
+        n_colors = len(self.chart_sub_tables)
 
-        xticks = self.columns[0]
-        ys = quantity_columns
-        ylabel = ", ".join([c.name for c in ys])
-        xlabel = xticks.name
         data = [
-            go.Bar(x=yticks, y=xticks, marker=dict(color=self.get_color_from_palette(idx, n_colors=len(ys))), name=yticks.name, orientation="h")
-            for idx, yticks in enumerate(ys)
+            go.Bar(x=list(tab.values()), 
+                   y=list(tab.keys()), 
+                   marker=dict(color=self.get_color_from_palette(idx, n_colors=n_colors)), 
+                   name=tab.name, 
+                   orientation="h",)
+            for idx, tab in enumerate(self.chart_sub_tables)
         ]
         layout = go.Layout(
             title=title or "barchart",
@@ -1021,18 +1025,24 @@ class ResultSet(list, ColumnGuesserMixin):
 
     def _render_columnchart_plotly(self, key_word_sep=" ", title=None, **kwargs):
 
-        self.build_columns()
-        quantity_columns = [c for c in self.columns[1:] if c.is_quantity]
-        if len(quantity_columns) < 1:
+        self._build_chart_sub_tables()
+        if len(self.chart_sub_tables) < 1:
             return None
+        ylabel_names = []
+        for tab in self.chart_sub_tables:
+            if tab.col_y.name not in ylabel_names:
+                ylabel_names.append(tab.col_y.name)
+        ylabel = ", ".join(ylabel_names)
+        xlabel = self.chart_sub_tables[0].col_x.name
+        n_colors = len(self.chart_sub_tables)
 
-        xticks = self.columns[0]
-        ys = quantity_columns
-        ylabel = ", ".join([c.name for c in ys])
-        xlabel = xticks.name
         data = [
-            go.Bar(x=xticks, y=yticks, marker=dict(color=self.get_color_from_palette(idx, n_colors=len(ys))), name=yticks.name)
-            for idx, yticks in enumerate(ys)
+            go.Bar(
+                x=list(tab.keys()), 
+                y=list(tab.values()), 
+                marker=dict(color=self.get_color_from_palette(idx, n_colors=n_colors)), 
+                name=tab.name,)
+            for idx, tab in enumerate(self.chart_sub_tables)
         ]
         layout = go.Layout(
             title=title or "columnchart",
@@ -1081,7 +1091,11 @@ class ResultSet(list, ColumnGuesserMixin):
         xlabel = xticks.name
         data = [
             go.Scatter(
-                x=xticks, y=yticks, name=yticks.name, line=dict(width=1, color=self.get_color_from_palette(idx, n_colors=len(ys))), opacity=0.8
+                x=xticks, 
+                y=yticks, 
+                name=yticks.name, 
+                line=dict(width=1, color=self.get_color_from_palette(idx, n_colors=len(ys))), 
+                opacity=0.8
             )
             for idx, yticks in enumerate(ys)
         ]
