@@ -3,6 +3,7 @@ from kql.kql_engine import KqlEngineError
 from kql.kusto_engine import KustoEngine
 from kql.ai_engine import AppinsightsEngine
 from kql.la_engine import LoganalyticsEngine
+from kql.file_engine import FileEngine
 from kql.display import Display
 
 
@@ -16,34 +17,36 @@ class Connection(object):
     last_current_by_engine = {}
 
     @classmethod
-    def _tell_format(cls, engine1=None, engine2=None, engine3=None):
-        str1 = engine1.tell_format() if engine1 else ""
-        str2 = engine2.tell_format() if engine2 else ""
-        str3 = engine2.tell_format() if engine3 else ""
-        lst1 = Connection.get_connection_list_by_schema(engine1.schema) if engine1 else []
-        lst2 = Connection.get_connection_list_by_schema(engine2.schema) if engine2 else []
-        lst3 = Connection.get_connection_list_by_schema(engine3.schema) if engine3 else []
-        msg = """kql magic format requires connection info, examples:{0}{1}{2}
-               or an existing connection: {3}
+    def _tell_format(cls, engines):
+        strs = [e.engine1.tell_format() for e in engines]
+        lsts = []
+        for e in engines:
+            lsts.extend(Connection.get_connection_list_by_schema(e.schema))
+        msg = """kql magic format requires connection info, examples:{0}
+               or an existing connection: {1}
                    """.format(
-            str1, str2, str3, str(lst1 + lst2 + lst3)
+            ''.join(strs), str(lsts)
         )
         return msg
 
     @classmethod
     def tell_format(cls, connect_str=None):
         if connect_str.startswith("kusto://"):
-            return Connection.tell_format(KustoEngine)
+            return Connection._tell_format([KustoEngine])
         elif connect_str.startswith("appinsights://"):
-            return Connection.tell_format(AppinsightsEngine)
+            return Connection._tell_format([AppinsightsEngine])
         elif connect_str.startswith("loganalytics://"):
-            return Connection.tell_format(LoganalyticsEngine)
+            return Connection._tell_format([LoganalyticsEngine])
+        elif connect_str.startswith("file://"):
+            return Connection._tell_format([FileEngine])
         else:
-            return Connection.tell_format(KustoEngine, AppinsightsEngine, LoganalyticsEngine)
+            return Connection._tell_format([KustoEngine, AppinsightsEngine, LoganalyticsEngine, FileEngine])
 
     # Object constructor
-    def __init__(self, connect_str=None):
-        if connect_str.startswith("appinsights://"):
+    def __init__(self, connect_str=None, **kwargs):
+        if connect_str.startswith("file://"):
+            engine = FileEngine
+        elif connect_str.startswith("appinsights://"):
             engine = AppinsightsEngine
         elif connect_str.startswith("loganalytics://"):
             engine = LoganalyticsEngine
@@ -53,17 +56,17 @@ class Connection(object):
         elif "@" in connect_str:
             engine = KustoEngine
         else:
-            raise KqlEngineError('invalid connection_str, unknown schema. valid schemas are: "kusto://", "appinsights://" and "loganalytics://"')
+            raise KqlEngineError('invalid connection_str, unknown schema. valid schemas are: "kusto://", "appinsights://", "loganalytics://" and "file://"')
 
         last_current = self.last_current_by_engine.get(engine.__name__)
 
-        if engine in (AppinsightsEngine, LoganalyticsEngine):
+        if engine in (AppinsightsEngine, LoganalyticsEngine, FileEngine):
             conn_engine = engine(connect_str, last_current)
         else:
             if connect_str.startswith("kusto://"):
                 if last_current:
                     last_cluster_name = last_current.get_cluster()
-                    last_current = cls.connections.get("@" + last_cluster_name)
+                    last_current = self.connections.get("@" + last_cluster_name)
                 cluster_conn_engine = engine(connect_str, last_current)
                 cluster_name = cluster_conn_engine.get_cluster()
                 Connection._set_current(cluster_conn_engine, conn_name="@" + cluster_name)
@@ -71,7 +74,8 @@ class Connection(object):
             else:
                 conn_name = connect_str
             conn_engine = Connection._get_kusto_database_engine(conn_name)
-
+        if kwargs.get('use_cache') and engine != FileEngine:
+            conn_engine = FileEngine(conn_engine, last_current)
         Connection._set_current(conn_engine)
 
     @classmethod
@@ -79,11 +83,11 @@ class Connection(object):
         parts = conn_name.split("@")
         if len(parts) != 2:
             raise KqlEngineError(
-                'invalid connection_str, valid connection_str patternes are: "kusto://...", "appinsights://...", "loganalytics://..." and "database@cluster"'
+                'invalid connection_str, valid connection_str patternes are: "kusto://...", "appinsights://...", "loganalytics://...", "file://..." and "database@cluster"'
             )
-        if parts[1] in ["appinsights", "loganalytics"]:
+        if parts[1] in ["appinsights", "loganalytics", "file"]:
             raise KqlEngineError(
-                'invalid connection_str, connection_str pattern "database@cluster" cannot be used for "appinsights" and "loganalytics"'
+                'invalid connection_str, connection_str pattern "database@cluster" cannot be used for "appinsights", "loganalytics" and "file"'
             )
         cluster_conn_name = "@" + parts[1]
         cluster_conn = cls.connections.get(cluster_conn_name)
@@ -110,7 +114,7 @@ class Connection(object):
         return cls.connections.get(name)
 
     @classmethod
-    def get_connection(cls, descriptor):
+    def get_connection(cls, descriptor, **kwargs):
         "Sets the current database connection"
 
         if descriptor:
@@ -118,7 +122,7 @@ class Connection(object):
                 cls.current = descriptor
             else:
                 # either exist or create a new one
-                cls.current = cls.connections.get(descriptor) or Connection(descriptor).current
+                cls.current = cls.connections.get(descriptor) or Connection(descriptor, **kwargs).current
         elif not cls.current:
             raise ConnectionError("No current connection set yet.")
         cls.last_current_by_engine[cls.current.__class__.__name__] = cls.current

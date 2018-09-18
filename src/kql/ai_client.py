@@ -1,3 +1,4 @@
+import six
 from datetime import timedelta, datetime
 import re
 import json
@@ -23,14 +24,21 @@ class AppinsightsResult(dict):
         self.index2column_mapping = index2column_mapping
 
     def __getitem__(self, key):
-        if isinstance(key, int):
+        if isinstance(key, slice):
+            start = min(key.start or 0, len(self))
+            end = min(key.stop or len(self), len(self))
+            mapping = self.index2column_mapping[start:end]
+            dic = dict([(c, dict.__getitem__(self, c)) for c in mapping ])
+            return AppinsightsResult(mapping, dic)
+        elif isinstance(key, six.integer_types):
             val = dict.__getitem__(self, self.index2column_mapping[key])
         else:
             val = dict.__getitem__(self, key)
         return val
 
 
-class AppinsightsResponseTable(object):
+
+class AppinsightsResponseTable(six.Iterator):
     """ Iterator over returned rows """
 
     def __init__(self, response_table):
@@ -42,8 +50,8 @@ class AppinsightsResponseTable(object):
             self.index2column_mapping.append(c["ColumnName"])
             ctype = c["ColumnType"] if "ColumnType" in c else c["DataType"]
             self.index2type_mapping.append(ctype)
-        self.next = 0
-        self.last = len(self.rows)
+        self.row_index = 0
+        self._rows_count = len(self.rows)
         # Here we keep converter functions for each type that we need to take special care (e.g. convert)
         self.converters_lambda_mappings = {
             "datetime": self.to_datetime,
@@ -69,9 +77,15 @@ class AppinsightsResponseTable(object):
     def to_timedelta(value):
         if value is None:
             return None
+        if isinstance(value, (six.integer_types, float)): 
+            return timedelta(microseconds=(float(value) / 10))         
         m = TIMESPAN_PATTERN.match(value)
         if m:
-            return timedelta(
+            if match.group(1) == "-": 
+                factor = -1 
+            else: 
+                factor = 1 
+            return factor * timedelta(
                 days=int(m.group("d") or 0),
                 hours=int(m.group("h")),
                 minutes=int(m.group("m")),
@@ -82,25 +96,22 @@ class AppinsightsResponseTable(object):
             raise ValueError("Timespan value '{}' cannot be decoded".format(value))
 
     def __iter__(self):
+        self.row_index = 0
         return self
 
-    def next(self):
-        return self.__next__()
-
     def __next__(self):
-        if self.next >= self.last:
+        if self.row_index >= self.rows_count:
             raise StopIteration
-        else:
-            row = self.rows[self.next]
-            result_dict = {}
-            for index, value in enumerate(row):
-                data_type = self.index2type_mapping[index]
-                if data_type in self.converters_lambda_mappings:
-                    result_dict[self.index2column_mapping[index]] = self.converters_lambda_mappings[data_type](value)
-                else:
-                    result_dict[self.index2column_mapping[index]] = value
-            self.next = self.next + 1
-            return AppinsightsResult(self.index2column_mapping, result_dict)
+        row = self.rows[self.row_index]
+        result_dict = {}
+        for index, value in enumerate(row):
+            data_type = self.index2type_mapping[index]
+            if data_type in self.converters_lambda_mappings:
+                result_dict[self.index2column_mapping[index]] = self.converters_lambda_mappings[data_type](value)
+            else:
+                result_dict[self.index2column_mapping[index]] = value
+        self.row_index = self.row_index + 1
+        return AppinsightsResult(self.index2column_mapping, result_dict)
 
     @property
     def columns_name(self):
@@ -112,7 +123,7 @@ class AppinsightsResponseTable(object):
 
     @property
     def rows_count(self):
-        return len(self.rows)
+        return self._rows_count
 
     @property
     def columns_count(self):
@@ -120,16 +131,10 @@ class AppinsightsResponseTable(object):
 
     def fetchall(self):
         """ Returns iterator to get rows from response """
-        # TODO: we called this fethall to resemble Python DB API,
-        # but this can be as easily called result or similar
         return self.__iter__()
 
     def iter_all(self):
         """ Returns iterator to get rows from response """
-        # TODO: we called this fethall to resemble Python DB API,
-        # but this can be as easily called result or similar
-        self.next = 0
-        self.last = len(self.rows)
         return self.__iter__()
 
 
@@ -283,7 +288,7 @@ class AppinsightsClient(object):
         self.appid = appid
         self.appkey = appkey
 
-    def execute(self, appid, query: str, accept_partial_results=False, timeout=None, get_raw_response=False):
+    def execute(self, appid, query: str, accept_partial_results=False, timeout=None):
         """ Execute a simple query
         
         Parameters
@@ -300,12 +305,10 @@ class AppinsightsClient(object):
             If this is False, exception is raised. Default is False.
         timeout : float, optional
             Optional parameter. Network timeout in seconds. Default is no timeout.
-        get_raw_response : bool, optional
-            Optional parameter. Whether to get a raw response, or a parsed one.
         """
-        return self.execute_query(appid, query, accept_partial_results, timeout, get_raw_response)
+        return self.execute_query(appid, query, accept_partial_results, timeout)
 
-    def execute_query(self, appid, query: str, accept_partial_results=False, timeout=None, get_raw_response=False):
+    def execute_query(self, appid, query: str, accept_partial_results=False, timeout=None):
         """ Execute a simple query 
         
         Parameters
@@ -322,13 +325,11 @@ class AppinsightsClient(object):
             If this is False, exception is raised. Default is False.
         timeout : float, optional
             Optional parameter. Network timeout in seconds. Default is no timeout.
-        get_raw_response : bool, optional
-            Optional parameter. Whether to get a raw response, or a parsed one.
         """
         query_endpoint = "{0}/{1}/apps/{2}/query".format(self.cluster, self.version, self.appid)
-        return self._execute(query, query_endpoint, accept_partial_results, timeout, get_raw_response)
+        return self._execute(query, query_endpoint, accept_partial_results, timeout)
 
-    def _execute(self, query, query_endpoint, accept_partial_results=False, timeout=None, get_raw_response=False):
+    def _execute(self, query, query_endpoint, accept_partial_results=False, timeout=None):
         """ Executes given query against this client """
 
         request_payload = {"query": query}

@@ -8,7 +8,6 @@ from kql.log import KQLMAGIC_LOGGER_NAME
 logging.getLogger(KQLMAGIC_LOGGER_NAME).addHandler(logging.NullHandler())
 
 from IPython.core.magic import Magics, magics_class, cell_magic, line_magic, needs_local_scope
-from IPython.display import display_javascript
 from IPython.core.display import display
 from IPython.core.magics.display import Javascript
 
@@ -32,6 +31,8 @@ from kql.help_html import Help_html
 from kql.kusto_engine import KustoEngine
 from kql.kql_engine import KqlEngineError
 from kql.palette import Palettes, Palette
+from kql.file_engine import FileEngine
+from kql.file_client import FileClient
 
 
 @magics_class
@@ -97,14 +98,17 @@ class Kqlmagic(Magics, Configurable):
     palette_colors = Int(Palettes.DEFAULT_N_COLORS, config=True, help="Set pallete number of colors to be used for charts. Abbreviation: pc")
     palette_desaturation = Float(Palettes.DEFAULT_DESATURATION, config=True, help="Set pallete desaturation to be used for charts. Abbreviation: pd")
 
-    showfiles_folder_name = Unicode("temp_showfiles", config=True, help="Set the name of folder for temporary popup files")
+    temp_folder_name = Unicode("Kqlmagic_temp_files", config=True, help="Set the folder name for temporary files")
+    export_folder_name = Unicode("Kqlmagic_exported_files", config=True, help="Set the folder name  for exported files")
+    file_schema_folder_name = Unicode("Kqlmagic_file_schema_files", config=True, help="Set the folder name for file schema files")
 
     # valid values: jupyterlab or jupyternotebook
     notebook_app = Enum(["jupyterlab", "jupyternotebook"], "jupyternotebook", config=True, help="Set notebook application used.")
 
     add_kql_ref_to_help = Bool(True, config=True, help="On Kqlmagic load auto add kql reference to Help menu.")
     add_schema_to_help = Bool(True, config=True, help="On connection to database@cluster add  schema to Help menu.")
-
+    cache = Bool(False, config=True, help="Cache query results.")
+    use_cache = Bool(False, config=True, help="use cached query results, instead of executing the query.")
     @validate("palette_name")
     def _valid_value_palette_name(cls, proposal):
         try:
@@ -186,21 +190,21 @@ class Kqlmagic(Magics, Configurable):
                 </div>
             </body>
             </html>"""
-            Display.show(html_str)
-            Display.showInfoMessage("""Kqlmagic version: """ + VERSION + """, source: https://github.com/mbnshtck/jupyter-kql-magic""")
+            Display.show_html(html_str)
+            Display.showInfoMessage("""Kqlmagic package is updated frequently. Run pip install Kqlmagic --upgrade to use the latest version.<br>Kqlmagic version: """ + VERSION + """, source: https://github.com/mbnshtck/jupyter-kql-magic""")
             # <div><img src='https://az818438.vo.msecnd.net/icons/kusto.png'></div>
         _override_default_configuration(ip, kql_magic_load_mode)
 
         root_path = get_ipython().starting_dir.replace("\\", "/")
 
-        folder_name = ip.run_line_magic("config", "Kqlmagic.showfiles_folder_name")
+        folder_name = ip.run_line_magic("config", "Kqlmagic.temp_folder_name")
         showfiles_folder_Full_name = root_path + "/" + folder_name
         if not os.path.exists(showfiles_folder_Full_name):
             os.makedirs(showfiles_folder_Full_name)
         # ipython will removed folder at shutdown or by restart
         ip.tempdirs.append(showfiles_folder_Full_name)
         Display.showfiles_base_path = root_path
-        Display.showfiles_folder_name = Help_html.showfiles_folder_name = folder_name
+        Display.showfiles_folder_name = folder_name
         Display.notebooks_host = Help_html.notebooks_host = os.getenv("AZURE_NOTEBOOKS_HOST")
 
         app = ip.run_line_magic("config", "Kqlmagic.notebook_app")
@@ -378,7 +382,7 @@ class Kqlmagic(Magics, Configurable):
                 to_reverse=options.get("palette_reverse", False),
             )
             html_str = palette._repr_html_()
-            Display.show(html_str)
+            Display.show_html(html_str)
             special_info = True
 
         if options.get("popup_palettes"):
@@ -415,7 +419,7 @@ class Kqlmagic(Magics, Configurable):
             #
             # set connection
             #
-            conn = Connection.get_connection(connection_string)
+            conn = Connection.get_connection(connection_string, **options)
 
         # parse error
         except KqlEngineError as e:
@@ -440,9 +444,8 @@ class Kqlmagic(Magics, Configurable):
             # validate connection
             if not conn.options.get("validate_connection_string_done") and options.get("validate_connection_string", self.validate_connection_string):
                 retry_with_code = False
-                validation_query = "range c from 1 to 10 step 1 | count"
                 try:
-                    raw_query_result = conn.execute(validation_query, **options)
+                    conn.validate(**options)
                     conn.set_validation_result(True)
                 except Exception as e:
                     msg = str(e)
@@ -457,8 +460,8 @@ class Kqlmagic(Magics, Configurable):
                     database_name = conn.get_database()
                     cluster_name = conn.get_cluster()
                     connection_string = "kusto://code().cluster('" + cluster_name + "').database('" + database_name + "')"
-                    conn = Connection.get_connection(connection_string)
-                    raw_query_result = conn.execute(validation_query, **options)
+                    conn = Connection.get_connection(connection_string, **options)
+                    conn.validate(**options)
                     conn.set_validation_result(True)
 
             conn.options["validate_connection_string_done"] = True
@@ -467,12 +470,12 @@ class Kqlmagic(Magics, Configurable):
             if options.get("popup_schema") or (
                 not conn.options.get("auto_popup_schema_done") and options.get("auto_popup_schema", self.auto_popup_schema)
             ):
-                schema_file_path = Database_html.get_schema_file_path(conn)
+                schema_file_path = Database_html.get_schema_file_path(conn, **options)
                 Database_html.popup_schema(schema_file_path, conn.get_conn_name())
 
             conn.options["auto_popup_schema_done"] = True
             if not conn.options.get("add_schema_to_help_done") and options.get("add_schema_to_help"):
-                schema_file_path = schema_file_path or Database_html.get_schema_file_path(conn)
+                schema_file_path = schema_file_path or Database_html.get_schema_file_path(conn, **options)
                 Help_html.add_menu_item(conn.get_conn_name(), schema_file_path, **options)
                 conn.options["add_schema_to_help_done"] = True
 
@@ -542,6 +545,11 @@ class Kqlmagic(Magics, Configurable):
                     saved_result.feedback_info.append("Returning data to local variable {}".format(result_var))
                 self.shell.user_ns.update({result_var: result if result is not None else saved_result})
                 result = None
+
+            if options.get('cache') and not options.get('use_cache') and not isinstance(conn, FileEngine):
+                file_path = FileClient().save(conn.get_database(), conn.get_cluster(), query, raw_query_result, **options)
+                if options.get("feedback", self.feedback):
+                    saved_result.feedback_info.append("query results cached")
 
             saved_result.suppress_result = False
             saved_result.display_info = False

@@ -37,6 +37,8 @@
     <Compile Include="src\kql\column_guesser.py" />
     <Compile Include="src\kql\connection.py" />
     <Compile Include="src\kql\display.py" />
+    <Compile Include="src\kql\file_client.py" />
+    <Compile Include="src\kql\file_engine.py" />
     <Compile Include="src\kql\help_html.py" />
     <Compile Include="src\kql\kql_engine.py" />
     <Compile Include="src\kql\kusto_client.py" />

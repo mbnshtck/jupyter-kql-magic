@@ -43,3 +43,5 @@ nosetests.xml
 #local dev folder
 **/local_dev_folder
 **/temp_showfiles
+/notebooks/Kqlmagic_file_schema_files
+/notebooks/Untitled.ipynb

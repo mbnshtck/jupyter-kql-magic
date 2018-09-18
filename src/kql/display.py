@@ -77,20 +77,25 @@ class Display(object):
     notebooks_host = None
 
     @staticmethod
-    def show(html_str, **kwargs):
-        if len(html_str) > 0:
+    def show_html(html_str):
+        display(HTML(html_str))
+
+    @staticmethod
+    def show(content, **kwargs):
+        if isinstance(content, str) and len(content) > 0:
             if kwargs is not None and kwargs.get("popup_window", False):
                 file_name = Display._get_name(**kwargs)
-                file_path = Display._html_to_file_path(html_str, file_name, **kwargs)
+                file_path = Display._html_to_file_path(content, file_name, **kwargs)
                 Display.show_window(file_name, file_path, **kwargs)
             else:
-                # print(HTML(html_str)._repr_html_())
-                display(HTML(html_str))
+                Display.show_html(content)
+        else:
+            display(content)
 
     @staticmethod
     def show_window(window_name, file_path, button_text=None, onclick_visibility=None, **kwargs):
         html_str = Display._get_window_html(window_name, file_path, button_text, onclick_visibility, **kwargs)
-        display(HTML(html_str))
+        Display.show_html(html_str)
 
     @staticmethod
     def to_styled_class(item, **kwargs):
@@ -261,21 +266,22 @@ class Display(object):
         return Display._getMessageHtml(msg, Display.danger_style)
 
     @staticmethod
+    def _showMessage(html_msg):
+        html_str = Display.toHtml(**html_msg)
+        Display.show_html(html_str)
+
+    @staticmethod
     def showSuccessMessage(msg, **kwargs):
-        html_str = Display.toHtml(**Display.getSuccessMessageHtml(msg))
-        Display.show(html_str, **kwargs)
+        Display._showMessage(Display.getSuccessMessageHtml(msg))
 
     @staticmethod
     def showInfoMessage(msg, **kwargs):
-        html_str = Display.toHtml(**Display.getInfoMessageHtml(msg))
-        Display.show(html_str, **kwargs)
+        Display._showMessage(Display.getInfoMessageHtml(msg))
 
     @staticmethod
     def showWarningMessage(msg, **kwargs):
-        html_str = Display.toHtml(**Display.getWarningMessageHtml(msg))
-        Display.show(html_str, **kwargs)
+        Display._showMessage(Display.getWarningMessageHtml(msg))
 
     @staticmethod
     def showDangerMessage(msg, **kwargs):
-        html_str = Display.toHtml(**Display.getDangerMessageHtml(msg))
-        Display.show(html_str, **kwargs)
+        Display._showMessage(Display.getDangerMessageHtml(msg))

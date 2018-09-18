@@ -161,7 +161,7 @@ class Database_html(object):
         return """<a href="#" class="list-group-item">""" + item + """</a>"""
 
     @staticmethod
-    def get_schema_file_path(conn):
+    def get_schema_file_path(conn, **kwargs):
         if isinstance(conn, KustoEngine) or isinstance(conn, AppinsightsEngine):
             database_name = conn.get_database()
             conn_name = conn.get_conn_name()
@@ -191,7 +191,7 @@ class Database_html(object):
                         pass
             html_str = Database_html.convert_database_metadata_to_html(database_metadata_tree, conn_name)
             window_name = conn_name.replace("@", "_at_") + "_schema"
-            return Display._html_to_file_path(html_str, window_name)
+            return Display._html_to_file_path(html_str, window_name, **kwargs)
         else:
             return None
 

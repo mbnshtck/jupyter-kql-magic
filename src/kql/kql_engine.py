@@ -47,10 +47,20 @@ class KqlEngine(object):
             client = self.get_client()
             if not client:
                 raise KqlEngineError("Client is not defined.")
-            response = client.execute(self.get_database(), query, accept_partial_results=False, timeout=None, get_raw_response=True)
+            response = client.execute(self.get_database(), query, accept_partial_results=False, timeout=None)
             # print(response.json_response)
             return KqlResponse(response, **kwargs)
 
+    def validate(self, **kwargs):
+        client = self.get_client()
+        if not client:
+            raise KqlEngineError("Client is not defined.")
+        query = "range c from 1 to 10 step 1 | count"
+        response = client.execute(self.get_database(), query, accept_partial_results=False, timeout=None)
+        # print(response.json_response)
+        table = KqlResponse(response, **kwargs).tables[0]
+        if table.rowcount() != 1 or table.colcount() != 1 or [r for r in table.fetchall()][0][0] != 10:
+            raise KqlEngineError("Client failed to validate connection.")
 
 class KqlEngineError(Exception):
     """Generic error class."""

@@ -16,8 +16,6 @@ from kql.palette import Palette, Palettes
 
 import plotly
 
-plotly.offline.init_notebook_mode(connected=True)
-
 import plotly.plotly as py
 import plotly.graph_objs as go
 
@@ -72,20 +70,88 @@ class UnicodeWriter(object):
             self.writerow(row)
 
 
-class CsvResultDescriptor(object):
+class FileResultDescriptor(bytes):
     """Provides IPython Notebook-friendly output for the feedback after a ``.csv`` called."""
 
+    FILE_BINARY_FORMATS = ['png', 'pdf', 'jpeg', 'jpg', 'eps']
+    FILE_STRING_FORMATS = ['svg', 'webp', 'csv']
+
+    @staticmethod
+    def get_format(file, format=None):
+        if format is None and file is not None and isinstance(file, str):
+            parts = file.split('.')
+            if len(parts) > 1:
+                f = parts[-1]
+                if f in FileResultDescriptor.FILE_BINARY_FORMATS or f in FileResultDescriptor.FILE_STRING_FORMATS:
+                    return f
+        return format
+
     # Object constructor
-    def __init__(self, file_path):
-        self.file_path = file_path
+    def __new__(cls, file_or_image, message=None, format=None, show=False):
+        if isinstance(file_or_image, bytes):
+            return super(FileResultDescriptor, cls).__new__(cls, file_or_image)
+        else:
+            return super(FileResultDescriptor, cls).__new__(cls)
+
+    def __init__(self, file_or_image, message=None, format=None, show=False):
+        if isinstance(file_or_image, bytes):
+            self.show = True
+        self.file_or_image = file_or_image
+        self.show = show
+        self.is_image = isinstance(file_or_image, bytes)
+        self.message = message or ("image" if self.is_image else file_or_image)
+        self.format = self.get_format(file_or_image, format)
+
+    def _get_data(self):
+        if self.is_image:
+            return self if self.format in FileResultDescriptor.FILE_BINARY_FORMATS else "".join(chr(x) for x in self)
+        else:
+            print(self._file_location_message())
+            return open(self.file_or_image, 'rb' if self.format in self.FILE_BINARY_FORMATS else 'r').read()
+
+    def _file_location_message(self):
+        return "%s at %s" % (self.message, os.path.join(os.path.abspath("."), self.file_or_image))
 
     # Printable unambiguous presentation of the object
     def __repr__(self):
-        return "CSV results at %s" % os.path.join(os.path.abspath("."), self.file_path)
+        if self.is_image:
+            return "".join( chr(x) for x in self)
+        elif self.show:
+            return str(self._get_data())
+        else:
+            return self._file_location_message()
 
     # IPython html presentation of the object
     def _repr_html_(self):
-        return '<a href="%s">CSV results</a>' % os.path.join(".", "files", self.file_path)
+        if self.show and self.format == 'html':
+            return self._get_data()
+        if not self.show and not self.is_image:
+            return '<a href="%s" download>%s</a>' % (os.path.join(".", "files", self.file_or_image), self.message)
+
+    def _repr_png_(self):
+        if self.show and self.format == 'png':
+            print('_repr_png_')
+            return self._get_data()
+
+    def _repr_jpeg_(self):
+        if self.show and (self.format == 'jpeg' or self.format == 'jpg'):
+            return self._get_data()
+
+    def _repr_svg_(self):
+        if self.show and self.format == 'svg':
+            return self._get_data()
+
+    def _repr_webp_(self):
+        if self.show and self.format == 'webp':
+            return self._get_data()
+
+    def _repr_pdf_(self):
+        if self.show and self.format == 'pdf':
+            return self._get_data()
+
+    def _repr_eps_(self):
+        if self.show and self.format == 'eps':
+            return self._get_data()
 
 
 def _nonbreaking_spaces(match_obj):
@@ -147,6 +213,10 @@ class ResultSet(list, ColumnGuesserMixin):
         if idx < len(palette):
             return str(palette[idx])
         return None
+
+    @property
+    def plotly_fig(self):
+        return self.metadata.get("figure_or_data")
 
     @property
     def palette(self):
@@ -223,7 +293,8 @@ class ResultSet(list, ColumnGuesserMixin):
                         r.feedback_info.append("Done ({:0>2}:{:06.3f}): {} records".format(int(minutes), seconds, r.records_count))
 
     def fork_result(self, fork_table_id=0):
-        return self._fork_table_resultSets.get(str(fork_table_id))
+        #return self._fork_table_resultSets.get(str(fork_table_id))
+        return self._fork_table_resultSets[str(fork_table_id)]
 
     @property
     def raw_json(self):
@@ -361,13 +432,34 @@ class ResultSet(list, ColumnGuesserMixin):
         if window_mode and not options.get("button_text"):
             options["button_text"] = "popup " + self.visualization + ((" - " + self.title) if self.title else "") + " "
         c = self._getChartHtml(window_mode)
-        if c is not None:
-            if c.get("body") or c.get("head"):
-                html = Display.toHtml(**c)
-                Display.show(html, **options)
-            return None
+        if c.get("body") or c.get("head"):
+            html = Display.toHtml(**c)
+            Display.show(html, **options)
+        elif c.get("fig"):
+            Display.show(c.get("fig"), **options)
         else:
             return self.show_table(**kwargs)
+
+
+    def to_image(self, **kwargs):
+        "export image of the chart that was specified in the query to a file"
+        params = kwargs or {}
+        fig = self._getChartHtml().get("fig")
+        if fig is not None:
+            file = params.get('filename')
+            image = self._export_chart_image_plotly(fig, file, **kwargs)
+            return FileResultDescriptor(image,message='image results', format=params.get('format'), show=params.get('show') )
+
+
+    def _export_chart_image_plotly(self, fig, file, **kwargs):
+        params = kwargs or {}
+        if file:
+            plotly.io.write_image(fig, file, format=params.get('format'),
+                          scale=params.get('scale'), width=params.get('width'), height=params.get('height'))
+            return file
+        else:
+            return plotly.io.to_image(fig, format=params.get('format'),
+                          scale=params.get('scale'), width=params.get('width'), height=params.get('height'))
 
     def popup_Chart(self, **kwargs):
         "display the chart that was specified in the query in a popup window"
@@ -393,7 +485,7 @@ class ResultSet(list, ColumnGuesserMixin):
         # https://kusto.azurewebsites.net/docs/queryLanguage/query_language_renderoperator.html
 
         if not self.is_chart():
-            return None
+            return {}
 
         if len(self) == 0:
             id = uuid.uuid4().hex
@@ -457,6 +549,7 @@ class ResultSet(list, ColumnGuesserMixin):
             figure_or_data = self._render_scatterchart_plotly(" ", self.title)
 
         if figure_or_data is not None:
+            self.metadata["figure_or_data"] = figure_or_data
             if window_mode:
                 head = (
                     '<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>'
@@ -468,9 +561,9 @@ class ResultSet(list, ColumnGuesserMixin):
                 )
                 return {"body": body, "head": head}
             else:
-                plotly.offline.iplot(figure_or_data, filename="plotlychart")
-                return {}
-        return None
+                self
+                return {"fig": figure_or_data}
+        return {}
 
     def pie(self, key_word_sep=" ", title=None, **kwargs):
         """Generates a pylab pie chart from the result set.
@@ -563,27 +656,28 @@ class ResultSet(list, ColumnGuesserMixin):
         plt.ylabel(self.ys[0].name)
         return plot
 
-    def to_csv(self, filename=None, **format_params):
+    def to_csv(self, filename=None, **kwargs):
         """Generate results in comma-separated form.  Write to ``filename`` if given.
            Any other parameters will be passed on to csv.writer."""
         if not self.pretty:
             return None  # no results
         self.pretty.add_rows(self)
         if filename:
-            encoding = format_params.get("encoding", "utf-8")
+            encoding = kwargs.get("encoding", "utf-8")
             if six.PY2:
                 outfile = open(filename, "wb")
             else:
                 outfile = open(filename, "w", newline="", encoding=encoding)
         else:
             outfile = six.StringIO()
-        writer = UnicodeWriter(outfile, **format_params)
+        writer = UnicodeWriter(outfile, **kwargs)
         writer.writerow(self.field_names)
         for row in self:
             writer.writerow(row)
         if filename:
             outfile.close()
-            return CsvResultDescriptor(filename)
+            message = 'csv results'
+            return FileResultDescriptor(filename, message=message, format='csv', **kwargs)
         else:
             return outfile.getvalue()
 
@@ -799,7 +893,7 @@ class ResultSet(list, ColumnGuesserMixin):
                 ticksuffix="",
             ),
         )
-        fig = go.Figure(data=data, layout=layout)
+        fig = go.FigureWidget(data=data, layout=layout)
         return fig
 
     def _render_stackedareachart_plotly(self, key_word_sep=" ", title=None, **kwargs):
@@ -861,7 +955,7 @@ class ResultSet(list, ColumnGuesserMixin):
                 ticksuffix="",
             ),
         )
-        fig = go.Figure(data=data, layout=layout)
+        fig = go.FigureWidget(data=data, layout=layout)
         return fig
 
     def _render_timechart_plotly(self, key_word_sep=" ", title=None, **kwargs):
@@ -924,7 +1018,7 @@ class ResultSet(list, ColumnGuesserMixin):
                 ticksuffix="",
             ),
         )
-        fig = go.Figure(data=data, layout=layout)
+        fig = go.FigureWidget(data=data, layout=layout)
         return fig
 
     def _render_piechart_plotly(self, key_word_sep=" ", title=None, **kwargs):
@@ -984,7 +1078,7 @@ class ResultSet(list, ColumnGuesserMixin):
                 for idx, tab in enumerate(self.chart_sub_tables)
             ],
         )
-        fig = go.Figure(data=data, layout=layout)
+        fig = go.FigureWidget(data=data, layout=layout)
         return fig
 
     def _render_barchart_plotly(self, key_word_sep=" ", title=None, **kwargs):
@@ -1020,7 +1114,7 @@ class ResultSet(list, ColumnGuesserMixin):
             ),
             yaxis=dict(type="category", title=xlabel),
         )
-        fig = go.Figure(data=data, layout=layout)
+        fig = go.FigureWidget(data=data, layout=layout)
         return fig
 
     def _render_columnchart_plotly(self, key_word_sep=" ", title=None, **kwargs):
@@ -1056,7 +1150,7 @@ class ResultSet(list, ColumnGuesserMixin):
                 ticksuffix="",
             ),
         )
-        fig = go.Figure(data=data, layout=layout)
+        fig = go.FigureWidget(data=data, layout=layout)
         return fig
 
     def _render_linechart_plotly(self, key_word_sep=" ", title=None, **kwargs):
@@ -1114,7 +1208,7 @@ class ResultSet(list, ColumnGuesserMixin):
                 # ticksuffix=''
             ),
         )
-        fig = go.Figure(data=data, layout=layout)
+        fig = go.FigureWidget(data=data, layout=layout)
         return fig
 
     def _render_scatterchart_plotly(self, key_word_sep=" ", title=None, **kwargs):
@@ -1168,7 +1262,7 @@ class ResultSet(list, ColumnGuesserMixin):
                 ticksuffix="",
             ),
         )
-        fig = go.Figure(data=data, layout=layout)
+        fig = go.FigureWidget(data=data, layout=layout)
         return fig
 
     def _render_anomalychart_plotly(self, key_word_sep=" ", title=None, **kwargs):

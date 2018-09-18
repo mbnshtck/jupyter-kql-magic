@@ -1,41 +1,40 @@
+import six
 import json
 from kql.display import Display
 
 
-class KqlRow(object):
+class KqlRow(six.Iterator):
     def __init__(self, row, col_num, **kwargs):
         self.kwargs = kwargs
         self.row = row
-        self.next = 0
-        self.last = col_num
+        self.column_index = 0
+        self.columns_count = col_num
 
     def __iter__(self):
-        self.next = 0
+        self.column_index = 0
         return self
 
-    def next(self):
-        return self.__next__()
-
     def __next__(self):
-        if self.next >= self.last:
+        if self.column_index >= self.columns_count:
             raise StopIteration
-        else:
-            val = self.__getitem__(self.next)
-            self.next = self.next + 1
-            return val
+        val = self.__getitem__(self.column_index)
+        self.column_index = self.column_index + 1
+        return val
 
     def __getitem__(self, key):
-        item = self.row[key]
-        return Display.to_styled_class(item, **self.kwargs)
-        return self.row[key]
+        if isinstance(key, slice):
+            s = self.row[key]
+            return KqlRow(s, len(s), **self.kwargs)
+        else:
+            return Display.to_styled_class(self.row[key], **self.kwargs)
 
     def __len__(self):
-        return self.last
+        return self.columns_count
 
     def __eq__(self, other):
-        if len(other) != self.last:
+        if len(other) != self.columns_count:
             return False
-        for i in range(self.last):
+        for i in range(self.columns_count):
             s = self.__getitem__(i)
             o = other[i]
             if o != s:
@@ -43,39 +42,35 @@ class KqlRow(object):
         return True
 
     def __str__(self):
-        return ", ".join(str(self.__getitem__(i)) for i in range(self.last))
+        return ", ".join(str(self.__getitem__(i)) for i in range(self.columns_count))
 
     def __repr__(self):
         return self.row.__repr__()
 
 
-class KqlRowsIter(object):
+class KqlRowsIter(six.Iterator):
     """ Iterator over returned rows, limited by size """
 
     def __init__(self, table, row_num, col_num, **kwargs):
         self.kwargs = kwargs
         self.table = table
-        self.next = 0
-        self.last = row_num
+        self.row_index = 0
+        self.rows_count = row_num
         self.col_num = col_num
 
     def __iter__(self):
-        self.next = 0
+        self.row_index = 0
         self.iter_all_iter = self.table.iter_all()
         return self
 
-    def next(self):
-        return self.__next__()
-
     def __next__(self):
-        if self.next >= self.last:
+        if self.row_index >= self.rows_count:
             raise StopIteration
-        else:
-            self.next = self.next + 1
-            return KqlRow(self.iter_all_iter.__next__(), self.col_num, **self.kwargs)
+        self.row_index = self.row_index + 1
+        return KqlRow(self.iter_all_iter.__next__(), self.col_num, **self.kwargs)
 
     def __len__(self):
-        return self.last
+        return self.rows_count
 
 
 class KqlResponse(object):
@@ -140,7 +135,7 @@ class KqlTableResponse(object):
     def returns_rows(self):
         return self.data_table.rows_count > 0
 
-    def to_dataframe(self, errors="raise"):
+    def to_dataframe(self, raise_errors=True):
         """Returns Pandas data frame."""
         import pandas
 
@@ -160,7 +155,7 @@ class KqlTableResponse(object):
                 frame[col_name] = frame[col_name].apply(lambda x: json.loads(x) if x else None)
             elif col_type in self.KQL_TO_DATAFRAME_DATA_TYPES:
                 pandas_type = self.KQL_TO_DATAFRAME_DATA_TYPES[col_type]
-                frame[col_name] = frame[col_name].astype(pandas_type, errors=errors)
+                frame[col_name] = frame[col_name].astype(pandas_type, errors="raise" if raise_errors else "ignore")
         return frame
 
     KQL_TO_DATAFRAME_DATA_TYPES = {

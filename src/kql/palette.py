@@ -1,3 +1,4 @@
+import six
 from kql.display import Display
 import seaborn as sns
 
@@ -97,7 +98,7 @@ class Palette(list):
                     return {}
                 color_list = eval(rgb[3:])
                 for color in color_list:
-                    if not isinstance(color, int) or color < 0 or color > 255:
+                    if not isinstance(color, six.integer_types) or color < 0 or color > 255:
                         return {}
             name = name.replace(" ", "")
             base_name = None

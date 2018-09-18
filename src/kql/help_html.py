@@ -1,5 +1,5 @@
 import time
-from IPython.core.display import display, HTML
+from IPython.core.display import display
 from IPython.core.magics.display import Javascript
 
 
@@ -9,7 +9,6 @@ class Help_html(object):
 
     notebooks_host = None
     showfiles_base_url = None
-    showfiles_folder_name = None
     _pending_helps = {}
 
     @staticmethod

@@ -70,7 +70,8 @@ class Parser(object):
         # connection not specified, override default
         #
         elif not (
-            parts[0].startswith("kusto://") or parts[0].startswith("appinsights://") or parts[0].startswith("loganalytics://") or "@" in parts[0]
+            parts[0].startswith("kusto://") or parts[0].startswith("appinsights://") or 
+            parts[0].startswith("loganalytics://") or parts[0].startswith("file://") or "@" in parts[0]
         ):
             connection = ""
             code = cell
@@ -163,10 +164,14 @@ class Parser(object):
             "palette_desaturation": {"flag": "palette_desaturation", "type": "float", "config": "config.palette_desaturation"},
             "pn": {"abbreviation": "palette_name"},
             "palette_name": {"flag": "palette_name", "type": "str", "config": "config.palette_name"},
-            "showfiles_folder_name": {"flag": "auto_popup_schema", "readonly": "True", "config": "config.showfiles_folder_name"},
+            "temp_folder_name": {"flag": "temp_folder_name", "readonly": "True", "config": "config.temp_folder_name"},
+            "file_schema_folder_name": {"flag": "file_schema_folder_name", "readonly": "True", "config": "config.file_schema_folder_name"},
+            "export_folder_name": {"flag": "export_folder_name", "readonly": "True", "config": "config.export_folder_name"},
             "notebook_app": {"flag": "notebook_app", "readonly": "True", "config": "config.notebook_app"},
             "add_kql_ref_to_help": {"flag": "add_kql_ref_to_help", "readonly": "True", "config": "config.add_kql_ref_to_help"},
             "add_schema_to_help": {"flag": "add_schema_to_help", "readonly": "True", "config": "config.add_schema_to_help"},
+            "cache" : {"flag": "cache", "readonly": "True", "config": "config.cache"},
+            "use_cache" : {"flag": "use_cache", "readonly": "True", "config": "config.use_cache"},
             "version": {"flag": "version", "type": "bool", "init": "False"},
             "palette": {"flag": "palette", "type": "bool", "init": "False"},
             "popup_palettes": {"flag": "popup_palettes", "type": "bool", "init": "False"},
