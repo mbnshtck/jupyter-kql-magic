@@ -45,3 +45,4 @@ nosetests.xml
 **/temp_showfiles
 /notebooks/Kqlmagic_file_schema_files
 /notebooks/Untitled.ipynb
+/notebooks/Kqlmagic_temp_files
