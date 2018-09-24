@@ -46,3 +46,4 @@ nosetests.xml
 /notebooks/Kqlmagic_file_schema_files
 /notebooks/Untitled.ipynb
 /notebooks/Kqlmagic_temp_files
+/notebooks/Kqlmagic_cache_files
