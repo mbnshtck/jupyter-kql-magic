@@ -47,3 +47,4 @@ nosetests.xml
 /notebooks/Untitled.ipynb
 /notebooks/Kqlmagic_temp_files
 /notebooks/Kqlmagic_cache_files
+/LOCAL_HACKING.txt

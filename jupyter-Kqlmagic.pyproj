@@ -20,9 +20,9 @@
   </PropertyGroup>
   <ItemGroup>
     <Content Include="dev_requirements.txt" />
-    <Content Include="HACKING.txt" />
     <Content Include="HISTORY.rst" />
     <Content Include="LICENSE.TXT" />
+    <Content Include="LOCAL_HACKING.txt" />
     <Content Include="MANIFEST.in" />
     <Content Include="NEWS.txt" />
     <Content Include="README.rst" />
@@ -32,18 +32,17 @@
   <ItemGroup>
     <Compile Include="azure_bdist_wheel.py" />
     <Compile Include="setup.py" />
-    <Compile Include="src\kql\ai_client.py" />
     <Compile Include="src\kql\ai_engine.py" />
     <Compile Include="src\kql\cache_client.py" />
     <Compile Include="src\kql\cache_engine.py" />
     <Compile Include="src\kql\column_guesser.py" />
     <Compile Include="src\kql\connection.py" />
     <Compile Include="src\kql\display.py" />
+    <Compile Include="src\kql\draft_client.py" />
     <Compile Include="src\kql\help_html.py" />
     <Compile Include="src\kql\kql_client.py" />
     <Compile Include="src\kql\kql_engine.py" />
     <Compile Include="src\kql\kusto_client.py" />
-    <Compile Include="src\kql\la_client.py" />
     <Compile Include="src\kql\la_engine.py" />
     <Compile Include="src\kql\log.py" />
     <Compile Include="src\kql\kql_magic.py" />
