@@ -11,7 +11,6 @@
     <OutputPath>.</OutputPath>
     <ProjectTypeGuids>{888888a0-9f3d-457c-b088-3a5042f75d52}</ProjectTypeGuids>
     <LaunchProvider>Standard Python launcher</LaunchProvider>
-    <Name>jupyter-Kqlmagic</Name>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)' == 'Debug'" />
   <PropertyGroup Condition="'$(Configuration)' == 'Release'" />
@@ -19,26 +18,30 @@
     <VisualStudioVersion Condition=" '$(VisualStudioVersion)' == '' ">10.0</VisualStudioVersion>
   </PropertyGroup>
   <ItemGroup>
+    <Content Include="CODE_OF_CONDUCT.md" />
+    <Content Include="CONTRIBUTING.md" />
     <Content Include="dev_requirements.txt" />
     <Content Include="HISTORY.rst" />
     <Content Include="LICENSE.TXT" />
     <Content Include="LOCAL_HACKING.txt" />
     <Content Include="MANIFEST.in" />
     <Content Include="NEWS.txt" />
+    <Content Include="NOTICE.TXT" />
     <Content Include="README.rst" />
     <Content Include="run_black.sh" />
     <Content Include="run_tests.sh" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="azure_bdist_wheel.py" />
+    <Compile Include="build_packages.py" />
     <Compile Include="setup.py" />
     <Compile Include="src\kql\ai_engine.py" />
-    <Compile Include="src\kql\cache_client.py" />
-    <Compile Include="src\kql\cache_engine.py" />
     <Compile Include="src\kql\column_guesser.py" />
     <Compile Include="src\kql\connection.py" />
     <Compile Include="src\kql\constants.py" />
     <Compile Include="src\kql\display.py" />
+    <Compile Include="src\kql\cache_client.py" />
+    <Compile Include="src\kql\cache_engine.py" />
     <Compile Include="src\kql\draft_client.py" />
     <Compile Include="src\kql\help_html.py" />
     <Compile Include="src\kql\kql_client.py" />
