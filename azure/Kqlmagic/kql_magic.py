@@ -9,8 +9,8 @@ import time
 import logging
 
 
-from kql.version import VERSION, get_pypi_latest_version, compare_version
-from kql.constants import Constants
+from Kqlmagic.version import VERSION, get_pypi_latest_version, compare_version
+from Kqlmagic.constants import Constants
 
 logging.getLogger(Constants.LOGGER_NAME).addHandler(logging.NullHandler())
 
@@ -22,22 +22,22 @@ from IPython.core.magics.display import Javascript
 from traitlets.config.configurable import Configurable
 from traitlets import Bool, Int, Float, Unicode, Enum, TraitError, validate
 
-from kql.connection import Connection
+from Kqlmagic.connection import Connection
 from azure.kusto.data.exceptions import KustoError
 
-from kql.results import ResultSet
-from kql.parser import Parser
-from kql.parameterizer import Parameterizer
+from Kqlmagic.results import ResultSet
+from Kqlmagic.parser import Parser
+from Kqlmagic.parameterizer import Parameterizer
 
-from kql.log import Logger, logger, set_logger, create_log_context, set_logging_options
-from kql.display import Display
-from kql.database_html import Database_html
-from kql.help_html import Help_html
-from kql.kusto_engine import KustoEngine
-from kql.kql_engine import KqlEngineError
-from kql.palette import Palettes, Palette
-from kql.cache_engine import CacheEngine
-from kql.cache_client import CacheClient
+from Kqlmagic.log import Logger, logger, set_logger, create_log_context, set_logging_options
+from Kqlmagic.display import Display
+from Kqlmagic.database_html import Database_html
+from Kqlmagic.help_html import Help_html
+from Kqlmagic.kusto_engine import KustoEngine
+from Kqlmagic.kql_engine import KqlEngineError
+from Kqlmagic.palette import Palettes, Palette
+from Kqlmagic.cache_engine import CacheEngine
+from Kqlmagic.cache_client import CacheClient
 
 _MAGIC_NAME = 'kql'
 
@@ -193,19 +193,19 @@ class Kqlmagic(Magics, Configurable):
                         <p>   &bull; kql language reference: Click on 'Help' tab > and Select 'kql referece'<br>
                           &bull; """+Constants.MAGIC_CLASS_NAME+""" configuarion: Run in cell '%config """+Constants.MAGIC_CLASS_NAME+"""'<br>
                           &bull; """+Constants.MAGIC_CLASS_NAME+""" syntax: Run in cell '%kql?'<br>
-                          &bull; """+Constants.MAGIC_CLASS_NAME+""" upgrate syntax: Run 'pip install """+Constants.MAGIC_PIP_REFERENCE_NAME+""" --upgrade'<br>
+                          &bull; """+Constants.MAGIC_CLASS_NAME+""" upgrate syntax: Run in cell '!pip install """+Constants.MAGIC_PIP_REFERENCE_NAME+""" --upgrade'<br>
                     </div>
                 </div>
             </body>
             </html>"""
             Display.show_html(html_str)
-            Display.showInfoMessage("""{0} package is updated frequently. Run pip install {1} --upgrade to use the latest version.<br>{0} version: {2}, source: {3}""".format(Constants.MAGIC_PACKAGE_NAME, Constants.MAGIC_PIP_REFERENCE_NAME, VERSION, Constants.MAGIC_SOURCE_REPOSITORY_NAME))
+            Display.showInfoMessage("""{0} package is updated frequently. Run '!pip install {1} --upgrade' to use the latest version.<br>{0} version: {2}, source: {3}""".format(Constants.MAGIC_PACKAGE_NAME, Constants.MAGIC_PIP_REFERENCE_NAME, VERSION, Constants.MAGIC_SOURCE_REPOSITORY_NAME))
             # <div><img src='https://az818438.vo.msecnd.net/icons/kusto.png'></div>
 
             try:
                 pypi_version = get_pypi_latest_version(Constants.MAGIC_PACKAGE_NAME)
                 if pypi_version and compare_version(pypi_version) > 0:
-                    Display.showWarningMessage("""{0} version {1} was found in PyPI, consider to upgrade before you continue. Run 'pip install {0} --upgrade'""".format(Constants.MAGIC_PACKAGE_NAME, pypi_version))
+                    Display.showWarningMessage("""{0} version {1} was found in PyPI, consider to upgrade before you continue. Run '!pip install {0} --upgrade'""".format(Constants.MAGIC_PACKAGE_NAME, pypi_version))
             except:
                 pass
 
